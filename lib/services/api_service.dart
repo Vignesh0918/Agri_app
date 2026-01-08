@@ -15,6 +15,7 @@ class ApiService {
 
   // Multiple fallback URLs to try automatically
   static const List<String> possibleUrls = [
+    'https://agri-stock-backend.onrender.com', // Render Production URL
     'http://10.126.206.31:8000', // Current detected IP
     'http://10.126.122.95:8000', // Previous network IP
     'http://localhost:8000', // Local development
