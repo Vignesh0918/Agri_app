@@ -4,12 +4,13 @@ class Invoice {
   final String customerName;
   final String customerPhone;
   final String itemName;
-  final int quantity;
+  final double quantity;
   final double unitPrice;
   final double basePrice; // Price without GST
   final double gstPercentage;
   final double gstAmount;
   final double totalPrice; // Final price including GST
+  final String quantityUnit;
 
   Invoice({
     required this.invoiceNumber,
@@ -23,6 +24,7 @@ class Invoice {
     required this.gstPercentage,
     required this.gstAmount,
     required this.totalPrice,
+    this.quantityUnit = "kg",
   });
 
   // Factory constructor to calculate GST automatically
@@ -32,9 +34,10 @@ class Invoice {
     required String customerName,
     required String customerPhone,
     required String itemName,
-    required int quantity,
+    required double quantity,
     required double unitPrice,
     required double gstPercentage,
+    String quantityUnit = "kg",
   }) {
     final basePrice = quantity * unitPrice;
     final gstAmount = basePrice * (gstPercentage / 100);
@@ -52,6 +55,7 @@ class Invoice {
       gstPercentage: gstPercentage,
       gstAmount: gstAmount,
       totalPrice: totalPrice,
+      quantityUnit: quantityUnit,
     );
   }
 
@@ -69,6 +73,7 @@ class Invoice {
       'gstPercentage': gstPercentage,
       'gstAmount': gstAmount,
       'totalPrice': totalPrice,
+      'quantityUnit': quantityUnit,
     };
   }
 
@@ -86,6 +91,7 @@ class Invoice {
       gstPercentage: json['gstPercentage'],
       gstAmount: json['gstAmount'],
       totalPrice: json['totalPrice'],
+      quantityUnit: json['quantityUnit'] ?? "kg",
     );
   }
 }

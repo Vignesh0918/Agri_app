@@ -28,6 +28,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   double _gstPercentage = 18.0; // Default GST 18%
   double _gstAmount = 0.0;
   double _totalAmount = 0.0;
+  String _selectedUnit = "kg";
 
   bool get _isSale => widget.type == TransactionType.sale;
 
@@ -52,7 +53,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   }
 
   void _calculateTotal() {
-    final qty = int.tryParse(_quantityController.text) ?? 0;
+    final qty = double.tryParse(_quantityController.text) ?? 0.0;
     final price = double.tryParse(_priceController.text) ?? 0.0;
 
     setState(() {
@@ -153,9 +154,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           customerName: _nameController.text.trim(),
           customerPhone: _phoneController.text.trim(),
           itemName: _productController.text.trim(),
-          quantity: int.parse(_quantityController.text),
+          quantity: double.parse(_quantityController.text),
           unitPrice: double.parse(_priceController.text),
           gstPercentage: _gstPercentage,
+          quantityUnit: _selectedUnit,
         );
 
         InvoiceService().addInvoice(invoice);
@@ -167,7 +169,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         partyName: _nameController.text.trim(),
         phoneNumber: _phoneController.text.trim(),
         productName: _productController.text.trim(),
-        quantity: int.parse(_quantityController.text),
+        quantity: double.parse(_quantityController.text),
         unitPrice: double.parse(_priceController.text),
         basePrice: _basePrice,
         gstPercentage: _isSale ? _gstPercentage : 0.0,
@@ -175,6 +177,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         totalAmount: _totalAmount,
         date: _selectedDate,
         invoiceNumber: invoiceNumber,
+        quantityUnit: _selectedUnit,
       );
 
       TransactionService().addTransaction(record);
@@ -276,25 +279,54 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               Row(
                 children: [
                   Expanded(
+                    flex: 2,
                     child: TextFormField(
                       controller: _quantityController,
-                      keyboardType: TextInputType.number,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       decoration: const InputDecoration(
                         labelText: 'Quantity',
                         prefixIcon: Icon(Icons.numbers),
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) return 'Required';
-                        if (int.tryParse(value) == null ||
-                            int.parse(value) <= 0) {
+                        if (double.tryParse(value) == null ||
+                            double.parse(value) <= 0) {
                           return 'Invalid';
                         }
                         return null;
                       },
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 8),
                   Expanded(
+                    flex: 1,
+                    child: DropdownButtonFormField<String>(
+                      value: _selectedUnit,
+                      decoration: const InputDecoration(
+                        labelText: 'Unit',
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 15,
+                        ),
+                      ),
+                      items: ["kg", "L"].map((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                      onChanged: (newValue) {
+                        setState(() {
+                          _selectedUnit = newValue!;
+                        });
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 2,
                     child: TextFormField(
                       controller: _priceController,
                       keyboardType: const TextInputType.numberWithOptions(

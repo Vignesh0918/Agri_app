@@ -85,6 +85,7 @@ class DBTransaction(Base):
     total_amount = Column(Float)
     date = Column(DateTime, default=datetime.utcnow)
     invoice_number = Column(String, nullable=True)
+    quantity_unit = Column(String, default="kg") # "kg" or "L"
 
 class DBInvoice(Base):
     __tablename__ = "invoices"
@@ -100,6 +101,7 @@ class DBInvoice(Base):
     gst_percentage = Column(Float)
     gst_amount = Column(Float)
     total_price = Column(Float)
+    quantity_unit = Column(String, default="kg")
 
 class DBCustomer(Base):
     __tablename__ = "customers"
@@ -158,6 +160,7 @@ class TransactionCreate(BaseModel):
     unit_price: float
     gst_percentage: float = 0.0
     date: Optional[datetime] = None
+    quantity_unit: str = "kg"
 
 class TransactionResponse(BaseModel):
     id: int
@@ -173,6 +176,7 @@ class TransactionResponse(BaseModel):
     total_amount: float
     date: datetime
     invoice_number: Optional[str] = None
+    quantity_unit: str = "kg"
 
     class Config:
         from_attributes = True
@@ -189,6 +193,7 @@ class InvoiceResponse(BaseModel):
     gst_percentage: float
     gst_amount: float
     total_price: float
+    quantity_unit: str = "kg"
 
     class Config:
         from_attributes = True
@@ -473,7 +478,8 @@ def create_transaction(transaction: TransactionCreate, db: Session = Depends(get
             base_price=base_price,
             gst_percentage=transaction.gst_percentage,
             gst_amount=gst_amount,
-            total_price=total_amount
+            total_price=total_amount,
+            quantity_unit=transaction.quantity_unit
         )
         db.add(db_invoice)
         
@@ -513,6 +519,10 @@ def get_transactions_by_date(start_date: str, end_date: str, db: Session = Depen
     except:
         raise HTTPException(status_code=400, detail="Invalid date format")
     return db.query(DBTransaction).filter(DBTransaction.date >= start, DBTransaction.date <= end).all()
+
+@app.get("/api/customers/{phone}/transactions", response_model=List[TransactionResponse])
+def get_customer_transactions(phone: str, db: Session = Depends(get_db)):
+    return db.query(DBTransaction).filter(DBTransaction.phone_number == phone).order_by(DBTransaction.date.desc()).all()
 
 @app.get("/api/dashboard/stats")
 async def get_dashboard_stats(db: Session = Depends(get_db)):

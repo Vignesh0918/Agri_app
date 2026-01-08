@@ -7,7 +7,7 @@ class TransactionRecord {
   final String phoneNumber;
 
   final String productName;
-  final int quantity;
+  final double quantity;
   final double unitPrice;
 
   // GST-related fields (only for sales)
@@ -18,6 +18,7 @@ class TransactionRecord {
 
   final DateTime date;
   final String? invoiceNumber; // Only for sales
+  final String quantityUnit; // "kg" or "L"
 
   TransactionRecord({
     required this.id,
@@ -33,5 +34,6 @@ class TransactionRecord {
     required this.totalAmount,
     required this.date,
     this.invoiceNumber,
+    this.quantityUnit = "kg",
   });
 }

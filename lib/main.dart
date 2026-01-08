@@ -1,30 +1,13 @@
 import 'package:flutter/material.dart';
-import 'screens/auth/login_screen.dart';
-import 'services/auth_service.dart';
-import 'screens/dashboard_screen.dart';
+import 'screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Auto-detect working backend URL
-  try {
-    await AuthService.testConnection();
-  } catch (e) {
-    debugPrint('Initial backend connection check failed: $e');
-  }
-
-  final bool loggedIn = await AuthService.isLoggedIn();
-  User? user;
-  if (loggedIn) {
-    user = await AuthService.getCurrentUser();
-  }
-
-  runApp(MyApp(initialUser: user));
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  final User? initialUser;
-  const MyApp({super.key, this.initialUser});
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -80,9 +63,7 @@ class MyApp extends StatelessWidget {
           margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
         ),
       ),
-      home: initialUser != null
-          ? DashboardScreen(userName: initialUser!.fullName)
-          : const LoginScreen(),
+      home: const SplashScreen(),
     );
   }
 }

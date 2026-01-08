@@ -55,12 +55,13 @@ class InvoiceService {
         customerName: response['customer_name'] ?? '',
         customerPhone: response['customer_phone'] ?? '',
         itemName: response['item_name'] ?? '',
-        quantity: response['quantity'] ?? 1,
+        quantity: (response['quantity'] ?? 1).toDouble(),
         unitPrice: (response['unit_price'] ?? 0).toDouble(),
         basePrice: (response['base_price'] ?? 0).toDouble(),
         gstPercentage: (response['gst_percentage'] ?? 0).toDouble(),
         gstAmount: (response['gst_amount'] ?? 0).toDouble(),
         totalPrice: (response['total_price'] ?? 0).toDouble(),
+        quantityUnit: response['quantity_unit'] ?? 'kg',
       );
     } catch (e) {
       print('Failed to fetch invoice: $e');

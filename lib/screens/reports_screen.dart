@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/transaction_service.dart';
+import '../services/data_service.dart';
+import '../models/dashboard_stats.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -12,6 +14,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   double todaySalesTotal = 0.0;
   double todayPurchasesTotal = 0.0;
   bool isLoading = true;
+  DashboardStats? stats;
 
   @override
   void initState() {
@@ -20,15 +23,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Future<void> _loadData() async {
-    final service = TransactionService();
+    final transactionService = TransactionService();
+    final dataService = DataService();
     try {
-      final sales = await service.getTodaySalesTotal();
-      final purchases = await service.getTodayPurchasesTotal();
+      final sales = await transactionService.getTodaySalesTotal();
+      final purchases = await transactionService.getTodayPurchasesTotal();
+      final dashboardStats = await dataService.getDashboardStats();
 
       if (mounted) {
         setState(() {
           todaySalesTotal = sales;
           todayPurchasesTotal = purchases;
+          stats = dashboardStats;
           isLoading = false;
         });
       }
@@ -69,7 +75,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 Expanded(
                   child: _buildInfoCard(
                     title: "Total Products",
-                    value: "145",
+                    value: stats?.totalProducts.toString() ?? "0",
                     icon: Icons.inventory,
                     color: Colors.blue,
                   ),
@@ -78,7 +84,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 Expanded(
                   child: _buildInfoCard(
                     title: "Low Stock",
-                    value: "5",
+                    value: stats?.lowStockItems.toString() ?? "0",
                     icon: Icons.warning_amber,
                     color: Colors.red,
                   ),
@@ -101,13 +107,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   children: [
                     _buildSalesRow(
                       "Total Sales",
-                      isLoading ? "Loading..." : "\$${todaySalesTotal.toStringAsFixed(2)}",
+                      isLoading
+                          ? "Loading..."
+                          : "\$${todaySalesTotal.toStringAsFixed(2)}",
                       Colors.green,
                     ),
                     const Divider(height: 24),
                     _buildSalesRow(
                       "Total Purchases",
-                      isLoading ? "Loading..." : "\$${todayPurchasesTotal.toStringAsFixed(2)}",
+                      isLoading
+                          ? "Loading..."
+                          : "\$${todayPurchasesTotal.toStringAsFixed(2)}",
                       Colors.indigo,
                     ),
                   ],
@@ -124,19 +134,22 @@ class _ReportsScreenState extends State<ReportsScreen> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Column(
-                children: [
-                  _buildMakeLowStockItem("Urea Fertilizer", 5),
-                  const Divider(height: 1),
-                  _buildMakeLowStockItem("Pesticide X-200", 2),
-                  const Divider(height: 1),
-                  _buildMakeLowStockItem("Tomato Seeds", 8),
-                  const Divider(height: 1),
-                  _buildMakeLowStockItem("Potash 50kg", 1),
-                  const Divider(height: 1),
-                  _buildMakeLowStockItem("NPK 20-20-20", 4),
-                ],
-              ),
+              child: stats != null && stats!.lowStockProducts.isNotEmpty
+                  ? Column(
+                      children: stats!.lowStockProducts.map((p) {
+                        return Column(
+                          children: [
+                            _buildMakeLowStockItem(p.name, p.quantity),
+                            if (p != stats!.lowStockProducts.last)
+                              const Divider(height: 1),
+                          ],
+                        );
+                      }).toList(),
+                    )
+                  : const Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Center(child: Text("No low stock warnings")),
+                    ),
             ),
           ],
         ),
