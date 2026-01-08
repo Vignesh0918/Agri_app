@@ -1,0 +1,13 @@
+--- Testing Signup with test_feec88@example.com ---
+Signup Status: 200
+Signup Response: {"id":10,"email":"test_feec88@example.com","full_name":"Test User","is_active":true,"created_at":"2026-01-08T04:10:55.460869"}
+
+--- Testing Login with test_feec88@example.com ---
+Login Status: 200
+Login Response: {"access_token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0X2ZlZWM4OEBleGFtcGxlLmNvbSIsImV4cCI6MTc2ODQ1MDI1Nn0.e4g5TCr57deyNbjJ3WhRqCQQJ5IYSWjPieR1E0cCzQI","token_type":"bearer"}
+
+- AUTH FLOW WORKS ON PRODUCTION!
+
+--- Testing /auth/me ---
+Me Status: 200
+Me Response: {"email":"test_feec88@example.com","full_name":"Test User","id":10,"is_active":true,"created_at":"2026-01-08T04:10:55.460869"}

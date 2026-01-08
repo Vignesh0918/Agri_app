@@ -26,7 +26,9 @@ class User {
       fullName: json['full_name'] ?? json['fullName'],
       isActive: json['is_active'] ?? json['isActive'],
       createdAt: DateTime.parse(json['created_at'] ?? json['createdAt']),
-      updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : null,
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'])
+          : null,
     );
   }
 
@@ -99,15 +101,23 @@ class AuthService {
   }
 
   // Signup
-  static Future<User> signup(String email, String fullName, String password) async {
+  static Future<User> signup(
+    String email,
+    String fullName,
+    String password,
+  ) async {
     try {
-      final response = await ApiService.signup(email, fullName, password);
+      // 1. Create the account
+      await ApiService.signup(email, fullName, password);
 
-      // Set logged in status
+      // 2. Automatically log in to get the token
+      await ApiService.login(email, password);
+
+      // 3. Set logged in status
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_isLoggedInKey, true);
 
-      // Get user data
+      // 4. Get user data (this will now work because token is set)
       final user = await getCurrentUser();
       if (user == null) {
         throw Exception('Failed to get user data after signup');
@@ -152,28 +162,28 @@ class AuthService {
     try {
       final health = await ApiService.healthCheck();
       return '✅ Connected to backend\n'
-             'URL: ${ApiService.getCurrentBackendUrl()}\n'
-             'Database: ${health['database']}\n'
-             'Status: ${health['status']}';
+          'URL: ${ApiService.getCurrentBackendUrl()}\n'
+          'Database: ${health['database']}\n'
+          'Status: ${health['status']}';
     } catch (e) {
       return '❌ Connection Failed\n'
-             'Error: ${e.toString()}\n'
-             'Current URL: ${ApiService.getCurrentBackendUrl()}\n\n'
-             '🔧 Troubleshooting Steps:\n\n'
-             '1. Backend Server:\n'
-             '   • Run: cd backend && python run.py\n'
-             '   • Check: Server shows "Application startup complete"\n\n'
-             '2. Network Connection:\n'
-             '   • Ensure mobile device and laptop are on same WiFi\n'
-             '   • Try different IP addresses\n'
-             '   • Check if firewall blocks port 8000\n\n'
-             '3. Test Connection:\n'
-             '   • Open browser: http://[IP]:8000/docs\n'
-             '   • Should show FastAPI documentation\n\n'
-             '4. Alternative Solutions:\n'
-             '   • Use mobile hotspot from laptop\n'
-             '   • Connect both devices to same network\n'
-             '   • Try USB debugging with ADB reverse';
+          'Error: ${e.toString()}\n'
+          'Current URL: ${ApiService.getCurrentBackendUrl()}\n\n'
+          '🔧 Troubleshooting Steps:\n\n'
+          '1. Backend Server:\n'
+          '   • Run: cd backend && python run.py\n'
+          '   • Check: Server shows "Application startup complete"\n\n'
+          '2. Network Connection:\n'
+          '   • Ensure mobile device and laptop are on same WiFi\n'
+          '   • Try different IP addresses\n'
+          '   • Check if firewall blocks port 8000\n\n'
+          '3. Test Connection:\n'
+          '   • Open browser: http://[IP]:8000/docs\n'
+          '   • Should show FastAPI documentation\n\n'
+          '4. Alternative Solutions:\n'
+          '   • Use mobile hotspot from laptop\n'
+          '   • Connect both devices to same network\n'
+          '   • Try USB debugging with ADB reverse';
     }
   }
 
