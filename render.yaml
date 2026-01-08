@@ -1,3 +1,8 @@
+databases:
+  - name: agri-db
+    plan: free
+    region: singapore
+
 services:
   - type: web
     name: agri-stock-backend
@@ -8,7 +13,9 @@ services:
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: DATABASE_URL
-        value: sqlite:///./agri_stock.db
+        fromDatabase:
+          name: agri-db
+          property: connectionString
       - key: SECRET_KEY
         generateValue: true
       - key: PYTHON_VERSION
