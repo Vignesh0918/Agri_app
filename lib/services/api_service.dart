@@ -42,8 +42,8 @@ class ApiService {
       // Web browser always uses localhost
       return 'http://localhost:8000';
     } else {
-      // Mobile apps use network IP
-      return 'http://10.126.206.31:8000';
+      // Mobile apps use the Render production URL as default
+      return 'https://agri-stock-backend.onrender.com';
     }
   }
 

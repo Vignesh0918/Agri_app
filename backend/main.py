@@ -259,6 +259,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/")
+def read_root():
+    return {"message": "Agri Stock Management API is running!", "docs": "/docs", "health": "/health"}
+
 # Health Check
 @app.get("/health")
 def health_check():
