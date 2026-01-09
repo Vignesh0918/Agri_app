@@ -10,10 +10,12 @@ class DataService {
       List<ProductStock> lowStockProducts = [];
       if (response['low_stock_products'] != null) {
         lowStockProducts = (response['low_stock_products'] as List)
-            .map((item) => ProductStock(
-                  name: item['name'] ?? '',
-                  quantity: item['quantity'] ?? 0,
-                ))
+            .map(
+              (item) => ProductStock(
+                name: item['name'] ?? '',
+                quantity: (item['quantity'] ?? 0).toDouble(),
+              ),
+            )
             .toList();
       }
 
@@ -23,7 +25,8 @@ class DataService {
         totalCustomers: response['total_customers'] ?? 0,
         lowStockProducts: lowStockProducts,
         todaySalesTotal: (response['today_sales_total'] ?? 0).toDouble(),
-        todayPurchasesTotal: (response['today_purchases_total'] ?? 0).toDouble(),
+        todayPurchasesTotal: (response['today_purchases_total'] ?? 0)
+            .toDouble(),
         totalSales: (response['total_sales'] ?? 0).toDouble(),
         totalGstCollected: (response['total_gst_collected'] ?? 0).toDouble(),
       );

@@ -2,6 +2,17 @@ import os
 import time
 from datetime import datetime, timedelta
 from typing import List, Optional, Union
+import pytz
+
+# Timezone Configuration
+IST = pytz.timezone('Asia/Kolkata')
+
+def get_ist_time():
+    return datetime.now(IST)
+
+def get_today_start():
+    now = get_ist_time()
+    return now.replace(hour=0, minute=0, second=0, microsecond=0)
 
 from fastapi import FastAPI, Depends, HTTPException, status, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -143,28 +154,51 @@ class StockChange(BaseModel):
 
 @app.post("/api/transactions/", response_model=TransactionResponse)
 def create_transaction(transaction: TransactionCreate, db: Session = Depends(get_db)):
+    # 1. Calculate Amounts
     base_price = transaction.quantity * transaction.unit_price
     gst_amount = base_price * (transaction.gst_percentage / 100)
     total_amount = base_price + gst_amount
-    # Use milliseconds to prevent collision on rapid entries
-    inv_num = f"INV-{int(time.time() * 1000)}" 
     
-    db_transaction = DBTransaction(**transaction.dict(), base_price=base_price, gst_amount=gst_amount, total_amount=total_amount, invoice_number=inv_num)
+    # 2. Generate Invoice Number (Unique Millisecond ID)
+    inv_num = f"INV-{int(datetime.now().timestamp() * 1000)}" 
     
+    # 3. Handle Date (Use IST if not provided)
+    txn_date = transaction.date if transaction.date else get_ist_time()
+    # If transaction.date comes from frontend (usually UTC or local), ensure it's naive or compatible
+    if txn_date.tzinfo is not None:
+        txn_date = txn_date.astimezone(IST).replace(tzinfo=None) # Store as naive IST in DB usually safer for simple SQLite
+    
+    # 4. Create Transaction Record
+    db_transaction = DBTransaction(
+        **transaction.dict(exclude={'date'}),
+        date=txn_date,
+        base_price=base_price, 
+        gst_amount=gst_amount, 
+        total_amount=total_amount, 
+        invoice_number=inv_num
+    )
+    
+    # 5. Update Stock
     product = db.query(DBProduct).filter(DBProduct.name == transaction.product_name).first()
     if product:
-        if transaction.type == "sale": product.stock_quantity -= transaction.quantity
-        else: product.stock_quantity += transaction.quantity
-        
-    # Also create an Invoice record if it's a sale
+        if transaction.type == "sale": 
+            product.stock_quantity -= transaction.quantity
+        else: 
+            product.stock_quantity += transaction.quantity
+        db.add(product) # Explicit add for cleanliness
+    else:
+        # If product not found, we don't block transaction, but maybe log it.
+        pass
+
+    # 6. Create Invoice (Sales only)
     if transaction.type == "sale":
         db_invoice = DBInvoice(
             invoice_number=inv_num,
-            date_of_sale=transaction.date or datetime.utcnow(),
+            date_of_sale=txn_date,
             customer_name=transaction.party_name,
             customer_phone=transaction.phone_number,
             item_name=transaction.product_name,
-            quantity=transaction.quantity, # Removed int casting
+            quantity=transaction.quantity,
             unit_price=transaction.unit_price,
             base_price=base_price,
             gst_percentage=transaction.gst_percentage,
@@ -174,27 +208,31 @@ def create_transaction(transaction: TransactionCreate, db: Session = Depends(get
         )
         db.add(db_invoice)
         
-        # AUTOMATIC CUSTOMER CREATION
-        # Check if customer exists by phone
+        # 7. Auto-Create Customer
         existing_customer = db.query(DBCustomer).filter(DBCustomer.phone == transaction.phone_number).first()
         if not existing_customer:
             new_customer = DBCustomer(
                 name=transaction.party_name,
-                phone=transaction.phone_number
+                phone=transaction.phone_number,
+                created_at=txn_date
             )
             db.add(new_customer)
             print(f"DEBUG: Auto-created new customer: {transaction.party_name}")
-    
-    db.add(db_transaction)
-    db.commit()
-    db.refresh(db_transaction)
-    return db_transaction
+
+    try:
+        db.add(db_transaction)
+        db.commit()
+        db.refresh(db_transaction)
+        return db_transaction
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Transaction failed: {str(e)}")
 
 @app.get("/api/transactions/summary")
 def get_summary(db: Session = Depends(get_db)):
-    today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-    sales = db.query(DBTransaction).filter(DBTransaction.type == "sale", DBTransaction.date >= today).all()
-    purchases = db.query(DBTransaction).filter(DBTransaction.type == "purchase", DBTransaction.date >= today).all()
+    today_start = get_today_start()
+    sales = db.query(DBTransaction).filter(DBTransaction.type == "sale", DBTransaction.date >= today_start).all()
+    purchases = db.query(DBTransaction).filter(DBTransaction.type == "purchase", DBTransaction.date >= today_start).all()
     return {
         "today_sales_total": sum(t.total_amount for t in sales),
         "today_purchases_total": sum(t.total_amount for t in purchases),
@@ -202,6 +240,7 @@ def get_summary(db: Session = Depends(get_db)):
         "today_purchases_count": len(purchases)
     }
 
+# ... (Date range endpoint remains same, assumes ISO from frontend) ...
 @app.get("/api/transactions/date-range/", response_model=List[TransactionResponse])
 def get_transactions_by_date(start_date: str, end_date: str, db: Session = Depends(get_db)):
     try:
@@ -211,9 +250,7 @@ def get_transactions_by_date(start_date: str, end_date: str, db: Session = Depen
         raise HTTPException(status_code=400, detail="Invalid date format")
     return db.query(DBTransaction).filter(DBTransaction.date >= start, DBTransaction.date <= end).all()
 
-@app.get("/api/customers/{phone}/transactions", response_model=List[TransactionResponse])
-def get_customer_transactions(phone: str, db: Session = Depends(get_db)):
-    return db.query(DBTransaction).filter(DBTransaction.phone_number == phone).order_by(DBTransaction.date.desc()).all()
+# ...
 
 @app.get("/api/dashboard/stats")
 async def get_dashboard_stats(db: Session = Depends(get_db)):
@@ -235,10 +272,10 @@ async def get_dashboard_stats(db: Session = Depends(get_db)):
     # Total Customers
     total_customers = db.query(DBCustomer).count()
     
-    # Daily Transaction Summary
-    today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-    sales = db.query(DBTransaction).filter(DBTransaction.type == "sale", DBTransaction.date >= today).all()
-    purchases = db.query(DBTransaction).filter(DBTransaction.type == "purchase", DBTransaction.date >= today).all()
+    # Daily Transaction Summary (Using IST)
+    today_start = get_today_start()
+    sales = db.query(DBTransaction).filter(DBTransaction.type == "sale", DBTransaction.date >= today_start).all()
+    purchases = db.query(DBTransaction).filter(DBTransaction.type == "purchase", DBTransaction.date >= today_start).all()
     
     # Total summary (for GST)
     all_invoices = db.query(DBInvoice).all()
@@ -253,6 +290,11 @@ async def get_dashboard_stats(db: Session = Depends(get_db)):
         "total_sales": sum(t.total_amount for t in db.query(DBTransaction).filter(DBTransaction.type == "sale").all()),
         "total_gst_collected": sum(i.gst_amount for i in all_invoices)
     }
+
+@app.get("/api/invoices/today/", response_model=List[InvoiceResponse])
+def get_today_invoices(db: Session = Depends(get_db)):
+    today_start = get_today_start()
+    return db.query(DBInvoice).filter(DBInvoice.date_of_sale >= today_start).all()
 
 if __name__ == "__main__":
     import uvicorn

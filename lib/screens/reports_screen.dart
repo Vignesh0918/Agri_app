@@ -109,7 +109,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       "Total Sales",
                       isLoading
                           ? "Loading..."
-                          : "\$${todaySalesTotal.toStringAsFixed(2)}",
+                          : "₹${todaySalesTotal.toStringAsFixed(2)}",
                       Colors.green,
                     ),
                     const Divider(height: 24),
@@ -117,7 +117,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       "Total Purchases",
                       isLoading
                           ? "Loading..."
-                          : "\$${todayPurchasesTotal.toStringAsFixed(2)}",
+                          : "₹${todayPurchasesTotal.toStringAsFixed(2)}",
                       Colors.indigo,
                     ),
                   ],
@@ -228,7 +228,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  Widget _buildMakeLowStockItem(String name, int qty) {
+  Widget _buildMakeLowStockItem(String name, double qty) {
+    final qtyDisplay = qty % 1 == 0 ? qty.toInt().toString() : qty.toString();
     return ListTile(
       leading: const Icon(Icons.error_outline, color: Colors.orange),
       title: Text(name, style: const TextStyle(fontWeight: FontWeight.w500)),
@@ -240,7 +241,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           border: Border.all(color: Colors.red.shade200),
         ),
         child: Text(
-          "$qty left",
+          "$qtyDisplay left",
           style: TextStyle(
             color: Colors.red.shade800,
             fontWeight: FontWeight.bold,

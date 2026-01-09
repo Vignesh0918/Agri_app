@@ -22,7 +22,7 @@ class DashboardStats {
 
 class ProductStock {
   final String name;
-  final int quantity;
+  final double quantity;
 
   ProductStock({required this.name, required this.quantity});
 }

@@ -167,7 +167,7 @@ class InvoiceService {
         'gst_percentage': invoice.gstPercentage,
         'gst_amount': invoice.gstAmount,
         'total_price': invoice.totalPrice,
-        'quantity_unit': invoice.quantityUnit ?? 'kg',
+        'quantity_unit': invoice.quantityUnit,
       };
 
       final response = await ApiService.post('/invoices/', invoiceData);
