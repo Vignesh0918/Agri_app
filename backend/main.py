@@ -20,7 +20,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from pydantic import BaseModel, EmailStr
-from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, DateTime, ForeignKey, Enum as SqlEnum
+from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, DateTime, ForeignKey, Enum as SqlEnum, func
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session, relationship
 import enum
@@ -34,7 +34,6 @@ SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-for-local-dev-12345")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 1 week
 
-# Database setup - Using SQLite for local testing
 # Database setup
 SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL")
 
@@ -56,7 +55,8 @@ engine = create_engine(
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# Models (Database)
+# --- Models (Database) ---
+
 class DBUser(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
@@ -73,7 +73,7 @@ class DBProduct(Base):
     description = Column(String, nullable=True)
     category = Column(String, index=True)
     unit_price = Column(Float)
-    stock_quantity = Column(Float, default=0.0) # Changed to Float
+    stock_quantity = Column(Float, default=0.0)
     min_stock_level = Column(Integer, default=5)
     supplier_name = Column(String, nullable=True)
     supplier_contact = Column(String, nullable=True)
@@ -106,7 +106,7 @@ class DBInvoice(Base):
     customer_name = Column(String)
     customer_phone = Column(String)
     item_name = Column(String)
-    quantity = Column(Float) # Changed to Float
+    quantity = Column(Float)
     unit_price = Column(Float)
     base_price = Column(Float)
     gst_percentage = Column(Float)
@@ -114,21 +114,88 @@ class DBInvoice(Base):
     total_price = Column(Float)
     quantity_unit = Column(String, default="kg")
 
-# ... (DBCustomer remains same) ...
+class DBCustomer(Base):
+    __tablename__ = "customers"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String)
+    phone = Column(String, unique=True, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
-# ...
+# Create tables
+Base.metadata.create_all(bind=engine)
+
+# --- Pydantic Models (Schemas) ---
+
+class UserBase(BaseModel):
+    email: EmailStr
+    full_name: str
+
+class UserCreate(UserBase):
+    password: str
+
+class UserResponse(UserBase):
+    id: int
+    is_active: bool
+    created_at: datetime
+    class Config:
+        from_attributes = True
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class TokenData(BaseModel):
+    email: Optional[str] = None
 
 class ProductBase(BaseModel):
     name: str
     description: Optional[str] = None
     category: str
     unit_price: float
-    stock_quantity: float # Changed to float
+    stock_quantity: float
     min_stock_level: int = 5
     supplier_name: Optional[str] = None
     supplier_contact: Optional[str] = None
 
-# ...
+class ProductCreate(ProductBase):
+    pass
+
+class ProductResponse(ProductBase):
+    id: int
+    is_active: bool
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    class Config:
+        from_attributes = True
+
+class TransactionCreate(BaseModel):
+    type: str # 'sale' or 'purchase'
+    party_name: str
+    phone_number: str
+    product_name: str
+    quantity: float
+    unit_price: float
+    gst_percentage: float = 0.0
+    date: Optional[datetime] = None
+    quantity_unit: str = "kg"
+
+class TransactionResponse(BaseModel):
+    id: int
+    type: str
+    party_name: str
+    phone_number: str
+    product_name: str
+    quantity: float
+    unit_price: float
+    base_price: float
+    gst_percentage: float
+    gst_amount: float
+    total_amount: float
+    date: datetime
+    invoice_number: Optional[str] = None
+    quantity_unit: str = "kg"
+    class Config:
+        from_attributes = True
 
 class InvoiceResponse(BaseModel):
     invoice_number: str
@@ -136,21 +203,174 @@ class InvoiceResponse(BaseModel):
     customer_name: str
     customer_phone: str
     item_name: str
-    quantity: float # Changed to float
+    quantity: float
     unit_price: float
     base_price: float
     gst_percentage: float
     gst_amount: float
     total_price: float
     quantity_unit: str = "kg"
-
     class Config:
         from_attributes = True
 
 class StockChange(BaseModel):
-    quantity_change: float # Changed to float
+    quantity_change: float
 
-# ...
+# --- FastAPI Initialization ---
+
+app = FastAPI(title="Agri Stock Manager API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+
+# --- Helper Functions ---
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+def get_password_hash(password):
+    return pwd_context.hash(password)
+
+def create_access_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            raise credentials_exception
+        token_data = TokenData(email=email)
+    except JWTError:
+        raise credentials_exception
+    user = db.query(DBUser).filter(DBUser.email == token_data.email).first()
+    if user is None:
+        raise credentials_exception
+    return user
+
+# --- Auth Routes ---
+
+@app.post("/api/auth/signup", response_model=UserResponse)
+def signup(user: UserCreate, db: Session = Depends(get_db)):
+    db_user = db.query(DBUser).filter(DBUser.email == user.email).first()
+    if db_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    hashed_password = get_password_hash(user.password)
+    new_user = DBUser(
+        email=user.email,
+        full_name=user.full_name,
+        hashed_password=hashed_password
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return new_user
+
+@app.post("/api/auth/login")
+async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    user = db.query(DBUser).filter(DBUser.email == form_data.username).first()
+    if not user or not verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token = create_access_token(data={"sub": user.email})
+    return {"access_token": access_token, "token_type": "bearer", "full_name": user.full_name}
+
+@app.get("/api/auth/me", response_model=UserResponse)
+async def read_users_me(current_user: DBUser = Depends(get_current_user)):
+    return current_user
+
+# --- Product Routes ---
+
+@app.get("/api/products/", response_model=List[ProductResponse])
+def get_products(
+    skip: int = 0, 
+    limit: int = 100, 
+    category: Optional[str] = None,
+    search: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    query = db.query(DBProduct).filter(DBProduct.is_active == True)
+    if category:
+        query = query.filter(DBProduct.category == category)
+    if search:
+        query = query.filter(DBProduct.name.ilike(f"%{search}%"))
+    return query.offset(skip).limit(limit).all()
+
+@app.post("/api/products/", response_model=ProductResponse)
+def create_product(product: ProductCreate, db: Session = Depends(get_db)):
+    db_product = DBProduct(**product.dict())
+    db.add(db_product)
+    db.commit()
+    db.refresh(db_product)
+    return db_product
+
+@app.get("/api/products/categories")
+def get_categories(db: Session = Depends(get_db)):
+    categories = db.query(DBProduct.category).distinct().all()
+    return {"categories": [c[0] for c in categories if c[0]]}
+
+@app.get("/api/products/low-stock")
+def get_low_stock(db: Session = Depends(get_db)):
+    products = db.query(DBProduct).filter(
+        DBProduct.is_active == True,
+        DBProduct.stock_quantity <= DBProduct.min_stock_level
+    ).all()
+    return [{"name": p.name, "quantity": p.stock_quantity} for p in products]
+
+@app.get("/api/products/{product_id}", response_model=ProductResponse)
+def get_product(product_id: int, db: Session = Depends(get_db)):
+    product = db.query(DBProduct).filter(DBProduct.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return product
+
+@app.put("/api/products/{product_id}", response_model=ProductResponse)
+def update_product(product_id: int, product_update: ProductCreate, db: Session = Depends(get_db)):
+    db_product = db.query(DBProduct).filter(DBProduct.id == product_id).first()
+    if not db_product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    for var, value in vars(product_update).items():
+        setattr(db_product, var, value)
+    db.commit()
+    db.refresh(db_product)
+    return db_product
+
+@app.patch("/api/products/{product_id}/stock")
+def update_stock(product_id: int, change: StockChange, db: Session = Depends(get_db)):
+    db_product = db.query(DBProduct).filter(DBProduct.id == product_id).first()
+    if not db_product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    db_product.stock_quantity += change.quantity_change
+    db.commit()
+    return {"status": "success", "product": db_product}
+
+# --- Transaction Routes ---
 
 @app.post("/api/transactions/", response_model=TransactionResponse)
 def create_transaction(transaction: TransactionCreate, db: Session = Depends(get_db)):
@@ -164,9 +384,8 @@ def create_transaction(transaction: TransactionCreate, db: Session = Depends(get
     
     # 3. Handle Date (Use IST if not provided)
     txn_date = transaction.date if transaction.date else get_ist_time()
-    # If transaction.date comes from frontend (usually UTC or local), ensure it's naive or compatible
     if txn_date.tzinfo is not None:
-        txn_date = txn_date.astimezone(IST).replace(tzinfo=None) # Store as naive IST in DB usually safer for simple SQLite
+        txn_date = txn_date.astimezone(IST).replace(tzinfo=None)
     
     # 4. Create Transaction Record
     db_transaction = DBTransaction(
@@ -185,11 +404,8 @@ def create_transaction(transaction: TransactionCreate, db: Session = Depends(get
             product.stock_quantity -= transaction.quantity
         else: 
             product.stock_quantity += transaction.quantity
-        db.add(product) # Explicit add for cleanliness
-    else:
-        # If product not found, we don't block transaction, but maybe log it.
-        pass
-
+        db.add(product)
+    
     # 6. Create Invoice (Sales only)
     if transaction.type == "sale":
         db_invoice = DBInvoice(
@@ -217,7 +433,6 @@ def create_transaction(transaction: TransactionCreate, db: Session = Depends(get
                 created_at=txn_date
             )
             db.add(new_customer)
-            print(f"DEBUG: Auto-created new customer: {transaction.party_name}")
 
     try:
         db.add(db_transaction)
@@ -240,7 +455,6 @@ def get_summary(db: Session = Depends(get_db)):
         "today_purchases_count": len(purchases)
     }
 
-# ... (Date range endpoint remains same, assumes ISO from frontend) ...
 @app.get("/api/transactions/date-range/", response_model=List[TransactionResponse])
 def get_transactions_by_date(start_date: str, end_date: str, db: Session = Depends(get_db)):
     try:
@@ -250,14 +464,17 @@ def get_transactions_by_date(start_date: str, end_date: str, db: Session = Depen
         raise HTTPException(status_code=400, detail="Invalid date format")
     return db.query(DBTransaction).filter(DBTransaction.date >= start, DBTransaction.date <= end).all()
 
-# ...
+# --- Dashboard & Reports ---
 
 @app.get("/api/dashboard/stats")
 async def get_dashboard_stats(db: Session = Depends(get_db)):
-    # Total products
+    # Total distinct active products
     total_products = db.query(DBProduct).filter(DBProduct.is_active == True).count()
     
-    # Low stock items
+    # Total stock quantity (sum of all product quantities)
+    total_stock_quantity = db.query(func.sum(DBProduct.stock_quantity)).filter(DBProduct.is_active == True).scalar() or 0.0
+    
+    # Low stock items count
     low_stock_items = db.query(DBProduct).filter(
         DBProduct.is_active == True,
         DBProduct.stock_quantity <= DBProduct.min_stock_level
@@ -272,29 +489,40 @@ async def get_dashboard_stats(db: Session = Depends(get_db)):
     # Total Customers
     total_customers = db.query(DBCustomer).count()
     
-    # Daily Transaction Summary (Using IST)
+    # Daily Transaction Summary
     today_start = get_today_start()
     sales = db.query(DBTransaction).filter(DBTransaction.type == "sale", DBTransaction.date >= today_start).all()
     purchases = db.query(DBTransaction).filter(DBTransaction.type == "purchase", DBTransaction.date >= today_start).all()
     
-    # Total summary (for GST)
+    # Total summary
+    all_sales = db.query(DBTransaction).filter(DBTransaction.type == "sale").all()
     all_invoices = db.query(DBInvoice).all()
     
     return {
         "total_products": total_products,
+        "total_stock": total_stock_quantity,
         "low_stock_items": low_stock_items,
         "total_customers": total_customers,
         "low_stock_products": [{"name": p.name, "quantity": p.stock_quantity} for p in low_stock_list],
-        "today_sales_total": sum(t.total_amount for t in sales),
-        "today_purchases_total": sum(t.total_amount for t in purchases),
-        "total_sales": sum(t.total_amount for t in db.query(DBTransaction).filter(DBTransaction.type == "sale").all()),
-        "total_gst_collected": sum(i.gst_amount for i in all_invoices)
+        "today_sales_total": sum((t.total_amount or 0.0) for t in sales),
+        "today_purchases_total": sum((t.total_amount or 0.0) for t in purchases),
+        "total_sales": sum((t.total_amount or 0.0) for t in all_sales),
+        "total_gst_collected": sum((i.gst_amount or 0.0) for i in all_invoices)
     }
 
 @app.get("/api/invoices/today/", response_model=List[InvoiceResponse])
 def get_today_invoices(db: Session = Depends(get_db)):
     today_start = get_today_start()
     return db.query(DBInvoice).filter(DBInvoice.date_of_sale >= today_start).all()
+
+@app.get("/api/customers/", response_model=List[dict])
+def get_customers(db: Session = Depends(get_db)):
+    customers = db.query(DBCustomer).all()
+    return [{"id": c.id, "name": c.name, "phone": c.phone} for c in customers]
+
+@app.get("/health")
+def health_check():
+    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
 
 if __name__ == "__main__":
     import uvicorn

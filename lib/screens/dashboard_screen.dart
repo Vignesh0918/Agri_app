@@ -155,8 +155,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     children: [
                       Expanded(
                         child: _buildSummaryCard(
-                          title: "In Stock",
-                          count: stats.totalProducts.toString(),
+                          title: "Total Stock",
+                          count: stats.totalStock.toStringAsFixed(1),
                           icon: Icons.inventory_2,
                           color: Colors.blue.shade700,
                           bgColor: Colors.blue.shade50,

@@ -21,6 +21,7 @@ class DataService {
 
       return DashboardStats(
         totalProducts: response['total_products'] ?? 0,
+        totalStock: (response['total_stock'] ?? 0).toDouble(),
         lowStockItems: response['low_stock_items'] ?? 0,
         totalCustomers: response['total_customers'] ?? 0,
         lowStockProducts: lowStockProducts,
@@ -35,6 +36,7 @@ class DataService {
       print('Failed to fetch dashboard stats: $e');
       return DashboardStats(
         totalProducts: 0,
+        totalStock: 0.0,
         lowStockItems: 0,
         totalCustomers: 0,
         lowStockProducts: [],

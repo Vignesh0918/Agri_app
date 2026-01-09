@@ -4,7 +4,7 @@ class Product {
   final String? description;
   final String category;
   final double unitPrice;
-  final int stockQuantity;
+  final double stockQuantity;
   final int minStockLevel;
   final String? supplierName;
   final String? supplierContact;
@@ -34,13 +34,17 @@ class Product {
       description: json['description'],
       category: json['category'] ?? '',
       unitPrice: (json['unit_price'] ?? 0).toDouble(),
-      stockQuantity: json['stock_quantity'] ?? 0,
+      stockQuantity: (json['stock_quantity'] ?? 0).toDouble(),
       minStockLevel: json['min_stock_level'] ?? 0,
       supplierName: json['supplier_name'],
       supplierContact: json['supplier_contact'],
       isActive: json['is_active'] ?? true,
-      createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
-      updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : null,
+      createdAt: DateTime.parse(
+        json['created_at'] ?? DateTime.now().toIso8601String(),
+      ),
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'])
+          : null,
     );
   }
 
@@ -64,24 +68,18 @@ class Product {
 
 class ProductStock {
   final String name;
-  final int quantity;
+  final double quantity;
 
-  ProductStock({
-    required this.name,
-    required this.quantity,
-  });
+  ProductStock({required this.name, required this.quantity});
 
   factory ProductStock.fromJson(Map<String, dynamic> json) {
     return ProductStock(
       name: json['name'] ?? '',
-      quantity: json['quantity'] ?? 0,
+      quantity: (json['quantity'] ?? 0).toDouble(),
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'name': name,
-      'quantity': quantity,
-    };
+    return {'name': name, 'quantity': quantity};
   }
 }

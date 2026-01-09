@@ -39,8 +39,8 @@ class ApiService {
 
     // 3. Fallback to platform-specific defaults
     if (kIsWeb) {
-      // Web browser always uses localhost
-      return 'http://localhost:8000';
+      // For testing, pointing web to Render as well
+      return 'https://agri-stock-backend.onrender.com';
     } else {
       // Mobile apps use the Render production URL as default
       return 'https://agri-stock-backend.onrender.com';

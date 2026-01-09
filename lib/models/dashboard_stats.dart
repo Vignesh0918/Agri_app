@@ -1,5 +1,6 @@
 class DashboardStats {
   final int totalProducts;
+  final double totalStock;
   final int lowStockItems;
   final int totalCustomers;
   final List<ProductStock> lowStockProducts;
@@ -10,6 +11,7 @@ class DashboardStats {
 
   DashboardStats({
     required this.totalProducts,
+    required this.totalStock,
     required this.lowStockItems,
     required this.totalCustomers,
     required this.lowStockProducts,

@@ -93,7 +93,7 @@ class _StockFormScreenState extends State<StockFormScreen> {
           description: '',
           category: widget.product?['category'] ?? 'Seeds',
           unitPrice: double.parse(_priceController.text),
-          stockQuantity: int.parse(_quantityController.text),
+          stockQuantity: double.parse(_quantityController.text),
           minStockLevel: 5,
           supplierName: _supplierController.text,
           supplierContact: '',
@@ -185,8 +185,8 @@ class _StockFormScreenState extends State<StockFormScreen> {
                         if (value == null || value.isEmpty) {
                           return 'Required';
                         }
-                        if (int.tryParse(value) == null ||
-                            int.parse(value) < 0) {
+                        if (double.tryParse(value) == null ||
+                            double.parse(value) < 0) {
                           return 'Invalid qty';
                         }
                         return null;

@@ -115,7 +115,7 @@ class _StockListScreenState extends State<StockListScreen> {
           ),
           ElevatedButton(
             onPressed: () async {
-              final int? toAdd = int.tryParse(quantityController.text);
+              final double? toAdd = double.tryParse(quantityController.text);
               if (toAdd != null && toAdd > 0) {
                 Navigator.pop(ctx);
                 final updated = await ProductService.updateStock(

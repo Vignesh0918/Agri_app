@@ -17,20 +17,28 @@ class ProductService {
       final response = await ApiService.get(endpoint);
       final List<dynamic> productsData = response as List<dynamic>;
 
-      return productsData.map((data) => Product(
-        id: data['id'],
-        name: data['name'] ?? '',
-        description: data['description'],
-        category: data['category'] ?? '',
-        unitPrice: (data['unit_price'] ?? 0).toDouble(),
-        stockQuantity: data['stock_quantity'] ?? 0,
-        minStockLevel: data['min_stock_level'] ?? 0,
-        supplierName: data['supplier_name'],
-        supplierContact: data['supplier_contact'],
-        isActive: data['is_active'] ?? true,
-        createdAt: DateTime.parse(data['created_at'] ?? DateTime.now().toIso8601String()),
-        updatedAt: data['updated_at'] != null ? DateTime.parse(data['updated_at']) : null,
-      )).toList();
+      return productsData
+          .map(
+            (data) => Product(
+              id: data['id'],
+              name: data['name'] ?? '',
+              description: data['description'],
+              category: data['category'] ?? '',
+              unitPrice: (data['unit_price'] ?? 0).toDouble(),
+              stockQuantity: (data['stock_quantity'] ?? 0).toDouble(),
+              minStockLevel: data['min_stock_level'] ?? 0,
+              supplierName: data['supplier_name'],
+              supplierContact: data['supplier_contact'],
+              isActive: data['is_active'] ?? true,
+              createdAt: DateTime.parse(
+                data['created_at'] ?? DateTime.now().toIso8601String(),
+              ),
+              updatedAt: data['updated_at'] != null
+                  ? DateTime.parse(data['updated_at'])
+                  : null,
+            ),
+          )
+          .toList();
     } catch (e) {
       print('Failed to fetch products: $e');
       return [];
@@ -47,13 +55,17 @@ class ProductService {
         description: response['description'],
         category: response['category'] ?? '',
         unitPrice: (response['unit_price'] ?? 0).toDouble(),
-        stockQuantity: response['stock_quantity'] ?? 0,
+        stockQuantity: (response['stock_quantity'] ?? 0).toDouble(),
         minStockLevel: response['min_stock_level'] ?? 0,
         supplierName: response['supplier_name'],
         supplierContact: response['supplier_contact'],
         isActive: response['is_active'] ?? true,
-        createdAt: DateTime.parse(response['created_at'] ?? DateTime.now().toIso8601String()),
-        updatedAt: response['updated_at'] != null ? DateTime.parse(response['updated_at']) : null,
+        createdAt: DateTime.parse(
+          response['created_at'] ?? DateTime.now().toIso8601String(),
+        ),
+        updatedAt: response['updated_at'] != null
+            ? DateTime.parse(response['updated_at'])
+            : null,
       );
     } catch (e) {
       print('Failed to fetch product: $e');
@@ -78,10 +90,14 @@ class ProductService {
       final response = await ApiService.get('/products/low-stock');
       final List<dynamic> productsData = response as List<dynamic>;
 
-      return productsData.map((data) => ProductStock(
-        name: data['name'] ?? '',
-        quantity: data['quantity'] ?? 0,
-      )).toList();
+      return productsData
+          .map(
+            (data) => ProductStock(
+              name: data['name'] ?? '',
+              quantity: data['quantity'] ?? 0,
+            ),
+          )
+          .toList();
     } catch (e) {
       print('Failed to fetch low stock products: $e');
       return [];
@@ -114,8 +130,12 @@ class ProductService {
         supplierName: response['supplier_name'],
         supplierContact: response['supplier_contact'],
         isActive: response['is_active'] ?? true,
-        createdAt: DateTime.parse(response['created_at'] ?? DateTime.now().toIso8601String()),
-        updatedAt: response['updated_at'] != null ? DateTime.parse(response['updated_at']) : null,
+        createdAt: DateTime.parse(
+          response['created_at'] ?? DateTime.now().toIso8601String(),
+        ),
+        updatedAt: response['updated_at'] != null
+            ? DateTime.parse(response['updated_at'])
+            : null,
       );
     } catch (e) {
       print('Failed to create product: $e');
@@ -124,7 +144,10 @@ class ProductService {
   }
 
   // Update product
-  static Future<Product?> updateProduct(int productId, Product updatedProduct) async {
+  static Future<Product?> updateProduct(
+    int productId,
+    Product updatedProduct,
+  ) async {
     try {
       final productData = {
         'name': updatedProduct.name,
@@ -137,7 +160,10 @@ class ProductService {
         'supplier_contact': updatedProduct.supplierContact,
       };
 
-      final response = await ApiService.put('/products/$productId', productData);
+      final response = await ApiService.put(
+        '/products/$productId',
+        productData,
+      );
       return Product(
         id: response['id'],
         name: response['name'] ?? '',
@@ -149,8 +175,12 @@ class ProductService {
         supplierName: response['supplier_name'],
         supplierContact: response['supplier_contact'],
         isActive: response['is_active'] ?? true,
-        createdAt: DateTime.parse(response['created_at'] ?? DateTime.now().toIso8601String()),
-        updatedAt: response['updated_at'] != null ? DateTime.parse(response['updated_at']) : null,
+        createdAt: DateTime.parse(
+          response['created_at'] ?? DateTime.now().toIso8601String(),
+        ),
+        updatedAt: response['updated_at'] != null
+            ? DateTime.parse(response['updated_at'])
+            : null,
       );
     } catch (e) {
       print('Failed to update product: $e');
@@ -170,7 +200,10 @@ class ProductService {
   }
 
   // Update stock
-  static Future<Product?> updateStock(int productId, int quantityChange) async {
+  static Future<Product?> updateStock(
+    int productId,
+    double quantityChange,
+  ) async {
     try {
       final response = await ApiService.patch('/products/$productId/stock', {
         'quantity_change': quantityChange,
@@ -182,13 +215,17 @@ class ProductService {
         description: response['product']['description'],
         category: response['product']['category'] ?? '',
         unitPrice: (response['product']['unit_price'] ?? 0).toDouble(),
-        stockQuantity: response['product']['stock_quantity'] ?? 0,
+        stockQuantity: (response['product']['stock_quantity'] ?? 0).toDouble(),
         minStockLevel: response['product']['min_stock_level'] ?? 0,
         supplierName: response['product']['supplier_name'],
         supplierContact: response['product']['supplier_contact'],
         isActive: response['product']['is_active'] ?? true,
-        createdAt: DateTime.parse(response['product']['created_at'] ?? DateTime.now().toIso8601String()),
-        updatedAt: response['product']['updated_at'] != null ? DateTime.parse(response['product']['updated_at']) : null,
+        createdAt: DateTime.parse(
+          response['product']['created_at'] ?? DateTime.now().toIso8601String(),
+        ),
+        updatedAt: response['product']['updated_at'] != null
+            ? DateTime.parse(response['product']['updated_at'])
+            : null,
       );
     } catch (e) {
       print('Failed to update stock: $e');
