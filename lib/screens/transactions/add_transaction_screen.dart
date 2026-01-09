@@ -4,6 +4,7 @@ import '../../services/transaction_service.dart';
 import '../../services/product_service.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
+import '../../services/customer_service.dart';
 
 class AddTransactionScreen extends StatefulWidget {
   final TransactionType type;
@@ -28,6 +29,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   double _gstAmount = 0.0;
   double _totalAmount = 0.0;
   String _selectedUnit = "kg";
+  List<String> _productSuggestions = [];
 
   bool get _isSale => widget.type == TransactionType.sale;
 
@@ -39,6 +41,34 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     super.initState();
     _quantityController.addListener(_calculateTotal);
     _priceController.addListener(_calculateTotal);
+    _phoneController.addListener(_lookupCustomer);
+    _loadProductSuggestions();
+  }
+
+  void _lookupCustomer() async {
+    final phone = _phoneController.text.trim();
+    // Only lookup if phone number length is likely complete (e.g. 10 digits)
+    if (phone.length >= 10) {
+      final customer = await CustomerService.getCustomerByPhone(phone);
+      if (customer != null && _nameController.text.isEmpty) {
+        setState(() {
+          _nameController.text = customer.name;
+        });
+      }
+    }
+  }
+
+  Future<void> _loadProductSuggestions() async {
+    try {
+      final products = await ProductService.getProducts();
+      if (mounted) {
+        setState(() {
+          _productSuggestions = products.map((p) => p.name).toList();
+        });
+      }
+    } catch (e) {
+      print('Error loading product suggestions: $e');
+    }
   }
 
   @override
@@ -269,15 +299,68 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Product Name
-              TextFormField(
-                controller: _productController,
-                decoration: const InputDecoration(
-                  labelText: 'Product Name',
-                  prefixIcon: Icon(Icons.inventory),
-                ),
-                validator: (value) =>
-                    value == null || value.isEmpty ? 'Required' : null,
+              // Product Name (with Autocomplete)
+              Autocomplete<String>(
+                optionsBuilder: (TextEditingValue textEditingValue) {
+                  if (textEditingValue.text.isEmpty) {
+                    return const Iterable<String>.empty();
+                  }
+                  return _productSuggestions.where((String option) {
+                    return option.toLowerCase().contains(
+                      textEditingValue.text.toLowerCase(),
+                    );
+                  });
+                },
+                onSelected: (String selection) {
+                  _productController.text = selection;
+                  // Optionally auto-fill price if we had product details easily
+                },
+                fieldViewBuilder:
+                    (context, controller, focusNode, onFieldSubmitted) {
+                      // Link our controller if possible, or use the provided one
+                      // Here we link our _productController and the provided controller
+                      controller.addListener(() {
+                        _productController.text = controller.text;
+                      });
+
+                      return TextFormField(
+                        controller: controller,
+                        focusNode: focusNode,
+                        decoration: const InputDecoration(
+                          labelText: 'Product Name',
+                          hintText: 'Search or type product name',
+                          prefixIcon: Icon(Icons.inventory),
+                        ),
+                        validator: (value) =>
+                            value == null || value.isEmpty ? 'Required' : null,
+                      );
+                    },
+                optionsViewBuilder: (context, onSelected, options) {
+                  return Align(
+                    alignment: Alignment.topLeft,
+                    child: Material(
+                      elevation: 4,
+                      child: Container(
+                        width: MediaQuery.of(context).size.width - 32,
+                        constraints: const BoxConstraints(maxHeight: 200),
+                        child: ListView.builder(
+                          padding: EdgeInsets.zero,
+                          shrinkWrap: true,
+                          itemCount: options.length,
+                          itemBuilder: (BuildContext context, int index) {
+                            final String option = options.elementAt(index);
+                            return ListTile(
+                              title: Text(option),
+                              onTap: () {
+                                onSelected(option);
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
               const SizedBox(height: 16),
 

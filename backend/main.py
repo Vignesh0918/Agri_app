@@ -542,11 +542,18 @@ async def get_dashboard_stats(db: Session = Depends(get_db)):
     all_sales = db.query(DBTransaction).filter(DBTransaction.type == "sale").all()
     all_invoices = db.query(DBInvoice).all()
     
+    # Low stock products list
+    low_stock_products_list = db.query(DBProduct).filter(
+        DBProduct.is_active == True,
+        DBProduct.stock_quantity <= DBProduct.min_stock_level
+    ).all()
+    
     return {
         "total_products": total_products,
-        "total_stock": float(total_products),  # Use count instead of sum as requested
-        "total_stock_quantity": total_stock_quantity, # Keep the sum for other uses
+        "total_stock": float(total_products),
+        "total_stock_quantity": total_stock_quantity,
         "low_stock_items": low_stock_items,
+        "low_stock_products": [{"name": p.name, "quantity": p.stock_quantity} for p in low_stock_products_list],
         "total_customers": total_customers,
         "today_sales_total": sum((t.total_amount or 0.0) for t in sales),
         "today_purchases_total": sum((t.total_amount or 0.0) for t in purchases),
@@ -561,6 +568,19 @@ def get_all_transactions(skip: int = 0, limit: int = 100, transaction_type: Opti
     if transaction_type:
         query = query.filter(DBTransaction.type == transaction_type)
     return query.order_by(DBTransaction.date.desc()).offset(skip).limit(limit).all()
+
+@app.get("/api/transactions/summary")
+def get_transaction_summary(db: Session = Depends(get_db)):
+    today_start = get_today_start()
+    sales = db.query(DBTransaction).filter(DBTransaction.type == "sale", DBTransaction.date >= today_start).all()
+    purchases = db.query(DBTransaction).filter(DBTransaction.type == "purchase", DBTransaction.date >= today_start).all()
+    
+    return {
+        "today_sales_total": sum((t.total_amount or 0.0) for t in sales),
+        "today_purchases_total": sum((t.total_amount or 0.0) for t in purchases),
+        "today_sales_count": len(sales),
+        "today_purchases_count": len(purchases)
+    }
 
 @app.get("/api/customers/{phone}/transactions", response_model=List[TransactionResponse])
 def get_customer_transactions(phone: str, db: Session = Depends(get_db)):
@@ -603,6 +623,13 @@ def search_invoices(search_data: dict, db: Session = Depends(get_db)):
 def get_today_invoices(db: Session = Depends(get_db)):
     today_start = get_today_start()
     return db.query(DBInvoice).filter(DBInvoice.date_of_sale >= today_start).all()
+
+@app.get("/api/customers/phone/{phone}")
+def get_customer_by_phone(phone: str, db: Session = Depends(get_db)):
+    customer = db.query(DBCustomer).filter(DBCustomer.phone == phone).first()
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    return {"id": customer.id, "name": customer.name, "phone": customer.phone}
 
 @app.get("/api/customers/", response_model=List[dict])
 def get_customers(db: Session = Depends(get_db)):

@@ -106,12 +106,34 @@ class _TransactionsHomeScreenState extends State<TransactionsHomeScreen> {
                   padding: const EdgeInsets.all(20.0),
                   child: Column(
                     children: [
-                      const Text(
-                        "Today's Summary",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            "Today's Summary",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          TextButton.icon(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      const TransactionHistoryScreen(),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.history, size: 18),
+                            label: const Text("View All"),
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.blueGrey,
+                              padding: EdgeInsets.zero,
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 20),
                       Row(
