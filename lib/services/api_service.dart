@@ -39,8 +39,9 @@ class ApiService {
 
     // 3. Fallback to platform-specific defaults
     if (kIsWeb) {
-      // For testing, pointing web to Render as well
-      return 'https://agri-stock-backend.onrender.com';
+      // For local development, point web to localhost
+      // For production web, you can use Render
+      return 'http://localhost:8000';
     } else {
       // Mobile apps use the Render production URL as default
       return 'https://agri-stock-backend.onrender.com';
