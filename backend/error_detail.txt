@@ -1,0 +1,4 @@
+Transaction failed: (sqlite3.OperationalError) table invoices has no column named quantity_unit
+[SQL: INSERT INTO invoices (invoice_number, date_of_sale, customer_name, customer_phone, item_name, quantity, unit_price, base_price, gst_percentage, gst_amount, total_price, quantity_unit) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: ('INV-1767967964853', '2026-01-09 19:42:44.853051', 'Test', '123', 'urea', 1.0, 100.0, 100.0, 18.0, 18.0, 118.0, 'kg')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)

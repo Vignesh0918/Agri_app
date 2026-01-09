@@ -39,8 +39,9 @@ SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL")
 
 # Fallback to SQLite if no DATABASE_URL is provided
 if not SQLALCHEMY_DATABASE_URL:
-    SQLALCHEMY_DATABASE_URL = "sqlite:///./agri_stock.db"
-
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    db_path = os.path.join(BASE_DIR, "agri_stock.db")
+    SQLALCHEMY_DATABASE_URL = f"sqlite:///{db_path}"
 # Handle PostgreSQL prefix fix if needed (for Render/Heroku)
 if SQLALCHEMY_DATABASE_URL.startswith("postgres://"):
     SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgres://", "postgresql://", 1)
@@ -446,7 +447,8 @@ def create_transaction(transaction: TransactionCreate, db: Session = Depends(get
     )
     
     # 5. Update Stock
-    product = db.query(DBProduct).filter(DBProduct.name == transaction.product_name).first()
+    # Look up product by name (case-insensitive)
+    product = db.query(DBProduct).filter(func.lower(DBProduct.name) == func.lower(transaction.product_name)).first()
     if product:
         if transaction.type == "sale": 
             product.stock_quantity -= transaction.quantity
