@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter/foundation.dart';
 
 class ApiService {
   // Auto-detected working backend URL (will be set after successful connection)
@@ -15,17 +14,18 @@ class ApiService {
 
   // Multiple fallback URLs to try automatically
   static const List<String> possibleUrls = [
-    'https://agri-stock-backend.onrender.com', // Render Production URL
-    'http://10.126.206.31:8000', // Current detected IP
-    'http://10.126.122.95:8000', // Previous network IP
+    'http://10.176.255.31:8000', // Current detected IP
+    'http://10.126.206.31:8000', // Previous network IP
+    'http://10.126.122.95:8000', // Older network IP
     'http://localhost:8000', // Local development
     'http://127.0.0.1:8000', // Localhost alternative
     'http://10.0.2.2:8000', // Android emulator default
     'http://192.168.1.100:8000', // Common local network
     'http://192.168.0.100:8000', // Alternative local network
+    'https://agri-stock-backend.onrender.com', // Render Production URL (Fallback)
   ];
 
-  // Get the backend URL (prioritizes environment variable, then platform defaults)
+  // Get the backend URL
   static String get baseUrl {
     // 1. If an environment variable is provided, use it
     if (_envBackendUrl.isNotEmpty) {
@@ -37,15 +37,9 @@ class ApiService {
       return _workingBaseUrl!;
     }
 
-    // 3. Fallback to platform-specific defaults
-    if (kIsWeb) {
-      // For local development, point web to localhost
-      // For production web, you can use Render
-      return 'http://localhost:8000';
-    } else {
-      // Mobile apps use the Render production URL as default
-      return 'https://agri-stock-backend.onrender.com';
-    }
+    // 3. For Production, always default to Render
+    // This ensures Web and Mobile see the same data
+    return 'https://agri-stock-backend.onrender.com';
   }
 
   static const String apiPrefix = '/api';
@@ -93,7 +87,9 @@ class ApiService {
       final url = Uri.parse('$baseUrl$apiPrefix$endpoint');
       final headers = await _getHeaders(requireAuth: requireAuth);
 
-      final response = await http.get(url, headers: headers);
+      final response = await http
+          .get(url, headers: headers)
+          .timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
         return json.decode(response.body);
@@ -123,11 +119,9 @@ class ApiService {
       final url = Uri.parse('$baseUrl$apiPrefix$endpoint');
       final headers = await _getHeaders(requireAuth: requireAuth);
 
-      final response = await http.post(
-        url,
-        headers: headers,
-        body: json.encode(data),
-      );
+      final response = await http
+          .post(url, headers: headers, body: json.encode(data))
+          .timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return json.decode(response.body);
@@ -307,40 +301,36 @@ class ApiService {
 
   // Health check with auto-detection
   static Future<Map<String, dynamic>> healthCheck() async {
-    // First try with current URL
+    // First try with current URL, but give it plenty of time for Render to wake up
     try {
       final url = Uri.parse('$baseUrl/health');
-      final response = await http.get(url).timeout(const Duration(seconds: 5));
+      final response = await http.get(url).timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
         return json.decode(response.body);
       }
     } catch (e) {
-      // If current URL fails, try auto-detection
-      print('Current URL failed, trying auto-detection...');
+      print('Current URL health check failed/timed out: $e');
     }
 
-    // Auto-detect working URL
-    final workingUrl = await autoDetectBackendUrl();
-    _workingBaseUrl = workingUrl;
+    // Only try auto-detection if the primary URL failed
+    // and we're not already on the production URL
+    if (!baseUrl.contains('onrender.com')) {
+      final workingUrl = await autoDetectBackendUrl();
+      _workingBaseUrl = workingUrl;
 
-    // Try again with the detected URL
-    try {
-      final url = Uri.parse('$workingUrl/health');
-      final response = await http.get(url).timeout(const Duration(seconds: 10));
-
-      if (response.statusCode == 200) {
-        return json.decode(response.body);
-      } else {
-        throw Exception(
-          'Backend not reachable - Status: ${response.statusCode}',
-        );
-      }
-    } catch (e) {
-      throw Exception(
-        'Backend connection failed after auto-detection: ${e.toString()}',
-      );
+      try {
+        final url = Uri.parse('$workingUrl/health');
+        final response = await http
+            .get(url)
+            .timeout(const Duration(seconds: 10));
+        if (response.statusCode == 200) return json.decode(response.body);
+      } catch (_) {}
     }
+
+    throw Exception(
+      'Backend server is not responding. Please check your internet or Render status.',
+    );
   }
 
   // Auto-detect working backend URL

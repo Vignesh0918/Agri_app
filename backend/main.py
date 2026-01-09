@@ -20,7 +20,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from pydantic import BaseModel, EmailStr
-from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, DateTime, ForeignKey, Enum as SqlEnum, func
+from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, DateTime, ForeignKey, Enum as SqlEnum, func, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session, relationship
 import enum
@@ -124,6 +124,27 @@ class DBCustomer(Base):
 
 # Create tables
 Base.metadata.create_all(bind=engine)
+
+# Auto-migration for existing tables (to add missing columns)
+def run_migrations():
+    with engine.connect() as conn:
+        # Add quantity_unit to invoices if missing
+        try:
+            conn.execute(text("ALTER TABLE invoices ADD COLUMN quantity_unit VARCHAR DEFAULT 'kg'"))
+            conn.commit()
+            print("Added missing column 'quantity_unit' to invoices")
+        except Exception:
+            pass # Column likely already exists
+            
+        # Add quantity_unit to transactions if missing
+        try:
+            conn.execute(text("ALTER TABLE transactions ADD COLUMN quantity_unit VARCHAR DEFAULT 'kg'"))
+            conn.commit()
+            print("Added missing column 'quantity_unit' to transactions")
+        except Exception:
+            pass
+
+run_migrations()
 
 # --- Pydantic Models (Schemas) ---
 

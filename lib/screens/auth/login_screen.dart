@@ -209,11 +209,96 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
+
+                  const SizedBox(height: 24),
+                  const Divider(),
+                  const SizedBox(height: 16),
+
+                  // Connection Status
+                  FutureBuilder<String>(
+                    future: AuthService.getConnectionStatus(),
+                    builder: (context, snapshot) {
+                      final status = snapshot.data ?? "Checking connection...";
+                      final isOk = status.contains('✅');
+
+                      return Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                isOk ? Icons.check_circle : Icons.error_outline,
+                                color: isOk ? Colors.green : Colors.orange,
+                                size: 16,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                isOk
+                                    ? "Connected to Server"
+                                    : "Server Connection Issue",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isOk ? Colors.green : Colors.orange,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                          TextButton.icon(
+                            onPressed: () {
+                              _showConnectionDialog(status);
+                            },
+                            icon: const Icon(Icons.settings, size: 14),
+                            label: const Text(
+                              "Connection Settings",
+                              style: TextStyle(fontSize: 12),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  void _showConnectionDialog(String status) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Server Connection"),
+        content: SingleChildScrollView(
+          child: Text(
+            status,
+            style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("OK"),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              setState(() {
+                _isLoading = true;
+              });
+              await AuthService.testConnection();
+              if (mounted) {
+                setState(() {
+                  _isLoading = false;
+                });
+              }
+            },
+            child: const Text("Retry Connection"),
+          ),
+        ],
       ),
     );
   }
