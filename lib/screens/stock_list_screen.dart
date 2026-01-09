@@ -17,6 +17,8 @@ class _StockListScreenState extends State<StockListScreen> {
   bool _isSearching = false;
   final TextEditingController _searchController = TextEditingController();
 
+  bool _dataChanged = false;
+
   @override
   void initState() {
     super.initState();
@@ -70,6 +72,7 @@ class _StockListScreenState extends State<StockListScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Item deleted successfully')),
         );
+        _dataChanged = true;
         _fetchProducts(); // Refresh list
       }
     } else {
@@ -120,6 +123,7 @@ class _StockListScreenState extends State<StockListScreen> {
                   toAdd,
                 );
                 if (updated != null) {
+                  _dataChanged = true;
                   _fetchProducts(); // Refresh
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -151,208 +155,228 @@ class _StockListScreenState extends State<StockListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: _isSearching
-            ? TextField(
-                controller: _searchController,
-                autofocus: true,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
-                  hintText: 'Search stock...',
-                  hintStyle: TextStyle(color: Colors.white70),
-                  border: InputBorder.none,
+    return PopScope(
+      canPop: true,
+      onPopInvoked: (didPop) {
+        // Just for consistency, though default back button is fine with WillPopScope or just leading.
+        // We will return dataChanged via leading button or just simple pop.
+        // But with PopScope/canPop=true, we can't easily pass result unless we use manual leading.
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Navigator.pop(context, _dataChanged),
+          ),
+          title: _isSearching
+              ? TextField(
+                  controller: _searchController,
+                  autofocus: true,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    hintText: 'Search stock...',
+                    hintStyle: TextStyle(color: Colors.white70),
+                    border: InputBorder.none,
+                  ),
+                )
+              : const Text("Stock List"),
+          backgroundColor: const Color(0xFF2E7D32),
+          foregroundColor: Colors.white,
+          actions: [
+            IconButton(
+              icon: Icon(_isSearching ? Icons.close : Icons.search),
+              onPressed: () {
+                setState(() {
+                  if (_isSearching) {
+                    _isSearching = false;
+                    _searchController.clear();
+                  } else {
+                    _isSearching = true;
+                  }
+                });
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: _fetchProducts,
+            ),
+          ],
+        ),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _filteredStock.isEmpty
+            ? Center(
+                child: Text(
+                  _isSearching
+                      ? "No items match your search."
+                      : "No stock available.\nAdd new items using the button below.",
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 16, color: Colors.grey),
                 ),
               )
-            : const Text("Stock List"),
-        backgroundColor: const Color(0xFF2E7D32),
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: Icon(_isSearching ? Icons.close : Icons.search),
-            onPressed: () {
-              setState(() {
-                if (_isSearching) {
-                  _isSearching = false;
-                  _searchController.clear();
-                } else {
-                  _isSearching = true;
-                }
-              });
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _fetchProducts,
-          ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _filteredStock.isEmpty
-          ? Center(
-              child: Text(
-                _isSearching
-                    ? "No items match your search."
-                    : "No stock available.\nAdd new items using the button below.",
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 16, color: Colors.grey),
-              ),
-            )
-          : RefreshIndicator(
-              onRefresh: _fetchProducts,
-              child: ListView.builder(
-                padding: const EdgeInsets.all(8.0),
-                itemCount: _filteredStock.length,
-                itemBuilder: (context, index) {
-                  final item = _filteredStock[index];
-                  final bool isLowStock = item.stockQuantity < 10;
+            : RefreshIndicator(
+                onRefresh: _fetchProducts,
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(8.0),
+                  itemCount: _filteredStock.length,
+                  itemBuilder: (context, index) {
+                    final item = _filteredStock[index];
+                    final bool isLowStock = item.stockQuantity < 10;
 
-                  return Card(
-                    elevation: 2,
-                    margin: const EdgeInsets.symmetric(
-                      vertical: 6,
-                      horizontal: 4,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: isLowStock
-                          ? BorderSide(color: Colors.red.shade300, width: 1)
-                          : BorderSide.none,
-                    ),
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
+                    return Card(
+                      elevation: 2,
+                      margin: const EdgeInsets.symmetric(
+                        vertical: 6,
+                        horizontal: 4,
                       ),
-                      onTap: () async {
-                        final Map<String, dynamic> productMap = {
-                          'id': item.id,
-                          'name': item.name,
-                          'quantity': item.stockQuantity,
-                          'price': item.unitPrice,
-                          'supplier': item.supplierName,
-                          'category': item.category,
-                        };
-                        final result = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                StockFormScreen(product: productMap),
-                          ),
-                        );
-                        if (result == true) _fetchProducts();
-                      },
-                      leading: CircleAvatar(
-                        backgroundColor: isLowStock
-                            ? Colors.red.shade50
-                            : Colors.green.shade50,
-                        child: Icon(
-                          isLowStock ? Icons.warning_amber : Icons.inventory_2,
-                          color: isLowStock
-                              ? Colors.red.shade700
-                              : Colors.green.shade700,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: isLowStock
+                            ? BorderSide(color: Colors.red.shade300, width: 1)
+                            : BorderSide.none,
+                      ),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
                         ),
-                      ),
-                      title: Text(
-                        item.name,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                        onTap: () async {
+                          final Map<String, dynamic> productMap = {
+                            'id': item.id,
+                            'name': item.name,
+                            'quantity': item.stockQuantity,
+                            'price': item.unitPrice,
+                            'supplier': item.supplierName,
+                            'category': item.category,
+                          };
+                          final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  StockFormScreen(product: productMap),
+                            ),
+                          );
+                          if (result == true) {
+                            _dataChanged = true;
+                            _fetchProducts();
+                          }
+                        },
+                        leading: CircleAvatar(
+                          backgroundColor: isLowStock
+                              ? Colors.red.shade50
+                              : Colors.green.shade50,
+                          child: Icon(
+                            isLowStock
+                                ? Icons.warning_amber
+                                : Icons.inventory_2,
+                            color: isLowStock
+                                ? Colors.red.shade700
+                                : Colors.green.shade700,
+                          ),
                         ),
-                      ),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Text(
-                                "Qty: ${item.stockQuantity}",
-                                style: TextStyle(
-                                  color: isLowStock
-                                      ? Colors.red
-                                      : Colors.black87,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                "Price: ₹${item.unitPrice.toStringAsFixed(2)}",
-                              ),
-                            ],
+                        title: Text(
+                          item.name,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
                           ),
-                          if (item.supplierName != null &&
-                              item.supplierName!.isNotEmpty)
-                            Text(
-                              "Supplier: ${item.supplierName}",
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                        ],
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(
-                              Icons.add_circle,
-                              color: Color(0xFF2E7D32),
-                              size: 28,
-                            ),
-                            onPressed: () {
-                              _showQuickAddDialog(item);
-                            },
-                          ),
-                          IconButton(
-                            icon: const Icon(
-                              Icons.delete_outline,
-                              color: Colors.grey,
-                            ),
-                            onPressed: () {
-                              showDialog(
-                                context: context,
-                                builder: (ctx) => AlertDialog(
-                                  title: const Text("Delete Item?"),
-                                  content: Text(
-                                    "Are you sure you want to delete '${item.name}'?",
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Text(
+                                  "Qty: ${item.stockQuantity}",
+                                  style: TextStyle(
+                                    color: isLowStock
+                                        ? Colors.red
+                                        : Colors.black87,
+                                    fontWeight: FontWeight.w600,
                                   ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(ctx),
-                                      child: const Text("Cancel"),
-                                    ),
-                                    TextButton(
-                                      onPressed: () {
-                                        Navigator.pop(ctx);
-                                        _deleteItem(item.id);
-                                      },
-                                      child: const Text(
-                                        "Delete",
-                                        style: TextStyle(color: Colors.red),
-                                      ),
-                                    ),
-                                  ],
                                 ),
-                              );
-                            },
-                          ),
-                        ],
+                                const SizedBox(width: 12),
+                                Text(
+                                  "Price: ₹${item.unitPrice.toStringAsFixed(2)}",
+                                ),
+                              ],
+                            ),
+                            if (item.supplierName != null &&
+                                item.supplierName!.isNotEmpty)
+                              Text(
+                                "Supplier: ${item.supplierName}",
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                          ],
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(
+                                Icons.add_circle,
+                                color: Color(0xFF2E7D32),
+                                size: 28,
+                              ),
+                              onPressed: () {
+                                _showQuickAddDialog(item);
+                              },
+                            ),
+                            IconButton(
+                              icon: const Icon(
+                                Icons.delete_outline,
+                                color: Colors.grey,
+                              ),
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (ctx) => AlertDialog(
+                                    title: const Text("Delete Item?"),
+                                    content: Text(
+                                      "Are you sure you want to delete '${item.name}'?",
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(ctx),
+                                        child: const Text("Cancel"),
+                                      ),
+                                      TextButton(
+                                        onPressed: () {
+                                          Navigator.pop(ctx);
+                                          _deleteItem(item.id);
+                                        },
+                                        child: const Text(
+                                          "Delete",
+                                          style: TextStyle(color: Colors.red),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
-            ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const StockFormScreen()),
-          );
-          if (result == true) _fetchProducts();
-        },
-        backgroundColor: const Color(0xFF2E7D32),
-        child: const Icon(Icons.add, color: Colors.white),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () async {
+            final result = await Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const StockFormScreen()),
+            );
+            if (result == true) {
+              _dataChanged = true;
+              _fetchProducts();
+            }
+          },
+          backgroundColor: const Color(0xFF2E7D32),
+          child: const Icon(Icons.add, color: Colors.white),
+        ),
       ),
     );
   }

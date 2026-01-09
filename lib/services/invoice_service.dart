@@ -152,12 +152,68 @@ class InvoiceService {
   }
 
   // Legacy methods for backward compatibility (now return empty/default data)
-  String generateInvoiceNumber() => '';
-  void addInvoice(Invoice invoice) {}
-  List<Invoice> get allInvoices => [];
-  List<Invoice> searchByCustomer(String query) => [];
-  List<Invoice> searchByInvoiceNumber(String query) => [];
-  List<Invoice> getInvoicesByDateRange(DateTime start, DateTime end) => [];
-  double getTotalSales() => 0.0;
-  double getTotalGSTCollected() => 0.0;
+  // Create invoice
+  Future<Invoice?> createInvoice(Invoice invoice) async {
+    try {
+      final invoiceData = {
+        'invoice_number': invoice.invoiceNumber,
+        'date_of_sale': invoice.dateOfSale.toIso8601String(),
+        'customer_name': invoice.customerName,
+        'customer_phone': invoice.customerPhone,
+        'item_name': invoice.itemName,
+        'quantity': invoice.quantity,
+        'unit_price': invoice.unitPrice,
+        'base_price': invoice.basePrice,
+        'gst_percentage': invoice.gstPercentage,
+        'gst_amount': invoice.gstAmount,
+        'total_price': invoice.totalPrice,
+        'quantity_unit': invoice.quantityUnit ?? 'kg',
+      };
+
+      final response = await ApiService.post('/invoices/', invoiceData);
+
+      return Invoice(
+        invoiceNumber: response['invoice_number'] ?? '',
+        dateOfSale: DateTime.parse(
+          response['date_of_sale'] ?? DateTime.now().toIso8601String(),
+        ),
+        customerName: response['customer_name'] ?? '',
+        customerPhone: response['customer_phone'] ?? '',
+        itemName: response['item_name'] ?? '',
+        quantity: (response['quantity'] ?? 1).toDouble(),
+        unitPrice: (response['unit_price'] ?? 0).toDouble(),
+        basePrice: (response['base_price'] ?? 0).toDouble(),
+        gstPercentage: (response['gst_percentage'] ?? 0).toDouble(),
+        gstAmount: (response['gst_amount'] ?? 0).toDouble(),
+        totalPrice: (response['total_price'] ?? 0).toDouble(),
+        quantityUnit: response['quantity_unit'] ?? 'kg',
+      );
+    } catch (e) {
+      print('Failed to create invoice: $e');
+      return null;
+    }
+  }
+
+  // Generate a unique invoice number
+  String generateInvoiceNumber() {
+    final now = DateTime.now();
+    return 'INV${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}-${now.millisecondsSinceEpoch.toString().substring(7)}';
+  }
+
+  // Deprecated/Legacy methods mapped to new ones
+  Future<void> addInvoice(Invoice invoice) async {
+    await createInvoice(invoice);
+  }
+
+  Future<List<Invoice>> get allInvoices async => await getAllInvoices();
+
+  Future<double> getTotalSales() async {
+    final summary = await getInvoiceSummary();
+    return (summary['total_sales'] ?? 0).toDouble();
+  }
+
+  Future<double> getTotalGSTCollected() async {
+    final summary = await getInvoiceSummary();
+    return (summary['total_gst_collected'] ?? 0).toDouble();
+  }
 }

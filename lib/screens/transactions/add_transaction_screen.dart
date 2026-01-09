@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/transaction_record.dart';
-import '../../models/invoice.dart';
 import '../../services/transaction_service.dart';
-import '../../services/invoice_service.dart';
+import '../../services/product_service.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 
@@ -136,58 +135,65 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   void _saveTransaction() async {
     // Made async
     if (_formKey.currentState!.validate()) {
+      final name = _nameController.text.trim();
+      final phone = _phoneController.text.trim();
+      final productNameInput = _productController.text.trim();
+      final quantity = double.parse(_quantityController.text);
+      final price = double.parse(_priceController.text);
+
       // Save contact to device automatically
-      await _saveContactToDevice(
-        _nameController.text.trim(),
-        _phoneController.text.trim(),
-      );
+      await _saveContactToDevice(name, phone);
 
-      String? invoiceNumber;
-
-      // Generate invoice for sales
-      if (_isSale) {
-        invoiceNumber = InvoiceService().generateInvoiceNumber();
-
-        final invoice = Invoice.create(
-          invoiceNumber: invoiceNumber,
-          dateOfSale: _selectedDate,
-          customerName: _nameController.text.trim(),
-          customerPhone: _phoneController.text.trim(),
-          itemName: _productController.text.trim(),
-          quantity: double.parse(_quantityController.text),
-          unitPrice: double.parse(_priceController.text),
-          gstPercentage: _gstPercentage,
-          quantityUnit: _selectedUnit,
+      // --- 1. Find Correct Product Name (Case-Insensitive) ---
+      // We do this to ensure the backend finds the product and updates stock.
+      String canonicalProductName = productNameInput;
+      try {
+        final products = await ProductService.getProducts(
+          search: productNameInput,
         );
-
-        InvoiceService().addInvoice(invoice);
+        final product = products.firstWhere(
+          (p) => p.name.toLowerCase() == productNameInput.toLowerCase(),
+          orElse: () {
+            if (products.length == 1) return products.first;
+            return products.isNotEmpty
+                ? products.first
+                : throw Exception("Product not found");
+          },
+        );
+        canonicalProductName = product.name;
+      } catch (e) {
+        print('Using input product name: $productNameInput. Reason: $e');
       }
 
+      // --- 2. Record Transaction (Backend handles Stock, Invoice, Customer) ---
       final record = TransactionRecord(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        id: DateTime.now().millisecondsSinceEpoch.toString(), // Temp ID
         type: widget.type,
-        partyName: _nameController.text.trim(),
-        phoneNumber: _phoneController.text.trim(),
-        productName: _productController.text.trim(),
-        quantity: double.parse(_quantityController.text),
-        unitPrice: double.parse(_priceController.text),
+        partyName: name,
+        phoneNumber: phone,
+        productName: canonicalProductName,
+        quantity: quantity,
+        unitPrice: price,
         basePrice: _basePrice,
         gstPercentage: _isSale ? _gstPercentage : 0.0,
         gstAmount: _isSale ? _gstAmount : 0.0,
         totalAmount: _totalAmount,
         date: _selectedDate,
-        invoiceNumber: invoiceNumber,
         quantityUnit: _selectedUnit,
       );
 
-      TransactionService().addTransaction(record);
+      // Using createTransaction directly since it returns Future, unlike the void wrapper
+      final createdTransaction = await TransactionService().createTransaction(
+        record,
+      );
 
       if (mounted) {
+        final invoiceNum = createdTransaction?.invoiceNumber;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
               _isSale
-                  ? 'Sale Recorded Successfully\nInvoice: $invoiceNumber'
+                  ? 'Sale Recorded Successfully\nInvoice: ${invoiceNum ?? "Generated"}'
                   : 'Purchase Recorded Successfully',
             ),
             duration: const Duration(seconds: 3),

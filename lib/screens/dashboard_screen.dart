@@ -357,13 +357,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           title: "Manage\nStock",
                           icon: Icons.store,
                           color: primaryGreen,
-                          onTap: () {
-                            Navigator.push(
+                          onTap: () async {
+                            final result = await Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (context) => const StockListScreen(),
                               ),
                             );
+                            if (result == true) _loadData();
                           },
                         ),
                       ),
@@ -374,14 +375,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           title: "Manage\nCustomers",
                           icon: Icons.people_outline,
                           color: Colors.orange.shade800,
-                          onTap: () {
-                            Navigator.push(
+                          onTap: () async {
+                            final result = await Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (context) =>
                                     const CustomerListScreen(),
                               ),
                             );
+                            if (result == true) _loadData();
                           },
                         ),
                       ),
@@ -392,13 +394,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           title: "Reports",
                           icon: Icons.bar_chart,
                           color: Colors.indigo.shade600,
-                          onTap: () {
-                            Navigator.push(
+                          onTap: () async {
+                            await Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (context) => const ReportsScreen(),
                               ),
                             );
+                            _loadData(); // Always refresh after reports just in case
                           },
                         ),
                       ),
