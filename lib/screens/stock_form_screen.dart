@@ -139,27 +139,41 @@ class _StockFormScreenState extends State<StockFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final isEditing = widget.product != null;
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAF8),
       appBar: AppBar(
-        title: Text(isEditing ? "Edit Stock" : "Add Stock"),
-        backgroundColor: const Color(0xFF2E7D32),
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          isEditing ? "Edit Product" : "New Product",
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w800,
+          ),
+        ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Product Name
+              _buildFieldLabel("Product Details"),
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(
-                  labelText: 'Product Name',
-                  prefixIcon: Icon(Icons.inventory),
+                  hintText: 'e.g. Urea Fertilizer',
+                  prefixIcon: Icon(Icons.inventory_2_rounded, size: 20),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -168,86 +182,99 @@ class _StockFormScreenState extends State<StockFormScreen> {
                   return null;
                 },
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
               // Quantity & Price Row
               Row(
                 children: [
                   Expanded(
-                    child: TextFormField(
-                      controller: _quantityController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Quantity',
-                        prefixIcon: Icon(Icons.numbers),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Required';
-                        }
-                        if (double.tryParse(value) == null ||
-                            double.parse(value) < 0) {
-                          return 'Invalid qty';
-                        }
-                        return null;
-                      },
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildFieldLabel("Stock Quantity"),
+                        TextFormField(
+                          controller: _quantityController,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            hintText: '0.0',
+                            prefixIcon: Icon(Icons.numbers_rounded, size: 20),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) return 'Required';
+                            if (double.tryParse(value) == null || double.parse(value) < 0) return 'Invalid';
+                            return null;
+                          },
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: TextFormField(
-                      controller: _priceController,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      decoration: const InputDecoration(
-                        labelText: 'Price',
-                        prefixIcon: Icon(Icons.attach_money),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Required';
-                        }
-                        if (double.tryParse(value) == null ||
-                            double.parse(value) < 0) {
-                          return 'Invalid price';
-                        }
-                        return null;
-                      },
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildFieldLabel("Unit Price (₹)"),
+                        TextFormField(
+                          controller: _priceController,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          decoration: const InputDecoration(
+                            hintText: '0.00',
+                            prefixIcon: Icon(Icons.currency_rupee_rounded, size: 20),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) return 'Required';
+                            if (double.tryParse(value) == null || double.parse(value) < 0) return 'Invalid';
+                            return null;
+                          },
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
               // Expiry Date
+              _buildFieldLabel("Expiry Date"),
               InkWell(
                 onTap: _pickDate,
-                child: InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: 'Expiry Date',
-                    prefixIcon: Icon(Icons.calendar_today),
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.green.shade100),
                   ),
-                  child: Text(
-                    _selectedDate == null
-                        ? 'Select Date'
-                        : DateFormat('yyyy-MM-dd').format(_selectedDate!),
-                    style: TextStyle(
-                      color: _selectedDate == null
-                          ? Colors.grey[600]
-                          : Colors.black87,
-                    ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.calendar_today_rounded, size: 20, color: Colors.grey[600]),
+                      const SizedBox(width: 12),
+                      Text(
+                        _selectedDate == null
+                            ? 'Select Expiry Date'
+                            : DateFormat('MMMM dd, yyyy').format(_selectedDate!),
+                        style: TextStyle(
+                          color: _selectedDate == null ? Colors.grey[400] : Colors.black87,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const Spacer(),
+                      Icon(Icons.chevron_right_rounded, color: Colors.grey[400]),
+                    ],
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
               // Supplier Name
+              _buildFieldLabel("Supplier"),
               TextFormField(
                 controller: _supplierController,
                 decoration: const InputDecoration(
-                  labelText: 'Supplier Name',
-                  prefixIcon: Icon(Icons.local_shipping),
+                  hintText: 'e.g. AgriCorp India',
+                  prefixIcon: Icon(Icons.local_shipping_rounded, size: 20),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -256,35 +283,49 @@ class _StockFormScreenState extends State<StockFormScreen> {
                   return null;
                 },
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 48),
 
-              // Buttons
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        side: const BorderSide(color: Colors.grey),
-                      ),
-                      child: const Text(
-                        "Cancel",
-                        style: TextStyle(color: Colors.black),
+              // Save Button
+              ElevatedButton(
+                onPressed: _saveStock,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colorScheme.primary,
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(isEditing ? Icons.check_rounded : Icons.add_rounded, color: Colors.white),
+                    const SizedBox(width: 12),
+                    Text(
+                      isEditing ? "Update Inventory" : "Add to Inventory",
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _saveStock,
-                      child: const Text("Save"),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(height: 24),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFieldLabel(String label) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 8),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+          color: Color(0xFF444444),
         ),
       ),
     );

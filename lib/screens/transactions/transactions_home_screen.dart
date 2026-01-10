@@ -56,178 +56,216 @@ class _TransactionsHomeScreenState extends State<TransactionsHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: true,
-      onPopInvoked: (didPop) {
-        if (didPop && _dataChanged) {
-          // Note: result cannot be sent via onPopInvoked directly in some versions,
-          // but we can ensure the parent receives it if we use Navigator.pop(context, true)
-          // in the leading button if present.
-          // However, Navigator.push await will get the value if we pop with it.
-        }
-      },
-      child: Scaffold(
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => Navigator.pop(context, _dataChanged),
-          ),
-          title: const Text("Daily Transactions"),
-          backgroundColor: Colors.blueGrey, // Distinct color for transactions
-          foregroundColor: Colors.white,
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.history),
-              tooltip: "History",
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const TransactionHistoryScreen(),
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
-        body: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Today's Summary
-              Card(
-                elevation: 4,
-                color: Colors.blueGrey.shade50,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            "Today's Summary",
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          TextButton.icon(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      const TransactionHistoryScreen(),
-                                ),
-                              );
-                            },
-                            icon: const Icon(Icons.history, size: 18),
-                            label: const Text("View All"),
-                            style: TextButton.styleFrom(
-                              foregroundColor: Colors.blueGrey,
-                              padding: EdgeInsets.zero,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildSummaryItem(
-                              "Total Sales",
-                              todaySales,
-                              Colors.green,
-                            ),
-                          ),
-                          Container(
-                            width: 1,
-                            height: 50,
-                            color: Colors.grey.shade300,
-                          ),
-                          Expanded(
-                            child: _buildSummaryItem(
-                              "Total Purchases",
-                              todayPurchases,
-                              Colors.blue,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 40),
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
-              // Main Actions
-              _buildActionCard(
-                context,
-                title: "Record Sale",
-                subtitle: "Sell stock to customer",
-                icon: Icons.sell,
-                color: const Color(0xFF2E7D32),
-                onTap: () async {
-                  final result = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const AddTransactionScreen(
-                        type: TransactionType.sale,
-                      ),
-                    ),
-                  );
-                  if (result == true) _refresh();
-                },
-              ),
-              const SizedBox(height: 16),
-              _buildActionCard(
-                context,
-                title: "Record Purchase",
-                subtitle: "Buy stock from supplier",
-                icon: Icons.shopping_cart,
-                color: Colors.blue.shade800,
-                onTap: () async {
-                  final result = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const AddTransactionScreen(
-                        type: TransactionType.purchase,
-                      ),
-                    ),
-                  );
-                  if (result == true) _refresh();
-                },
-              ),
-            ],
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAF8),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.black),
+          onPressed: () => Navigator.pop(context, _dataChanged),
+        ),
+        title: Text(
+          "Daily Transactions",
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w800,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.history_rounded, color: Colors.black87),
+            tooltip: "History",
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const TransactionHistoryScreen(),
+                ),
+              );
+            },
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Today's Summary
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(32),
+                      border: Border.all(color: Colors.green.shade50, width: 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.02),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              "Today's Activity",
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: colorScheme.primary.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                DateFormat('MMM dd').format(DateTime.now()),
+                                style: TextStyle(
+                                  color: colorScheme.primary,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 32),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildSummaryItem(
+                                "Sales",
+                                todaySales,
+                                const Color(0xFF2E7D32),
+                                Icons.trending_up_rounded,
+                              ),
+                            ),
+                            Container(
+                              width: 1.5,
+                              height: 40,
+                              color: Colors.grey[100],
+                            ),
+                            Expanded(
+                              child: _buildSummaryItem(
+                                "Purchases",
+                                todayPurchases,
+                                const Color(0xFF1976D2),
+                                Icons.trending_down_rounded,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+
+                  Text(
+                    "Quick Entry",
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  _buildActionCard(
+                    context,
+                    title: "Record Sale",
+                    subtitle: "Process a new customer sale",
+                    icon: Icons.add_shopping_cart_rounded,
+                    color: const Color(0xFF2E7D32),
+                    onTap: () async {
+                      final result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AddTransactionScreen(
+                            type: TransactionType.sale,
+                          ),
+                        ),
+                      );
+                      if (result == true) _refresh();
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  _buildActionCard(
+                    context,
+                    title: "Record Purchase",
+                    subtitle: "Log a supplier procurement",
+                    icon: Icons.inventory_rounded,
+                    color: const Color(0xFF1976D2),
+                    onTap: () async {
+                      final result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AddTransactionScreen(
+                            type: TransactionType.purchase,
+                          ),
+                        ),
+                      );
+                      if (result == true) _refresh();
+                    },
+                  ),
+                  const SizedBox(height: 32),
+                  
+                  // Secondary Action
+                  Center(
+                    child: TextButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const TransactionHistoryScreen(),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.list_alt_rounded),
+                      label: const Text("View All Transactions"),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.grey[600],
+                        textStyle: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
     );
   }
 
-  Widget _buildSummaryItem(String label, double amount, Color color) {
+  Widget _buildSummaryItem(String label, double amount, Color color, IconData icon) {
     return Column(
       children: [
+        Icon(icon, color: color.withOpacity(0.5), size: 20),
+        const SizedBox(height: 8),
         Text(
-          "₹${amount.toStringAsFixed(2)}",
+          "₹${amount.toStringAsFixed(0)}",
           style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
+            fontSize: 24,
+            fontWeight: FontWeight.w900,
             color: color,
+            letterSpacing: -1,
           ),
         ),
-        const SizedBox(height: 4),
         Text(
           label,
           style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[600],
-            fontWeight: FontWeight.w500,
+            fontSize: 13,
+            color: Colors.grey[500],
+            fontWeight: FontWeight.w600,
           ),
         ),
       ],
@@ -242,46 +280,59 @@ class _TransactionsHomeScreenState extends State<TransactionsHomeScreen> {
     required Color color,
     required VoidCallback onTap,
   }) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: color.withOpacity(0.05), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.03),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(24),
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Icon(icon, color: color, size: 32),
                 ),
-                child: Icon(icon, color: color, size: 32),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: TextStyle(color: Colors.grey.shade600),
-                    ),
-                  ],
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: TextStyle(color: Colors.grey[500], fontSize: 14),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
-            ],
+                Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Colors.grey[300]),
+              ],
+            ),
           ),
         ),
       ),

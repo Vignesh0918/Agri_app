@@ -39,37 +39,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Custom Color Palette for Agriculture Theme
-    const primaryGreen = Color(0xFF2E7D32); // Green 800
-    const lightGreen = Color(0xFFE8F5E9); // Green 50
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: const Color(0xFFF8FAF8),
       appBar: AppBar(
-        title: Row(
-          children: const [
-            Icon(Icons.eco, color: Colors.white),
-            SizedBox(width: 8),
-            Text(
-              "Agriculture Shop Manager",
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ],
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        backgroundColor: Colors.transparent,
+        title: Text(
+          "AgriShop",
+          style: theme.textTheme.titleLarge?.copyWith(
+            color: colorScheme.primary,
+            fontWeight: FontWeight.w900,
+            fontSize: 24,
+          ),
         ),
-        backgroundColor: primaryGreen,
-        foregroundColor: Colors.white,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Logout',
-            onPressed: () async {
-              await AuthService.logout();
-              if (!context.mounted) return;
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const LoginScreen()),
-              );
-            },
+          Container(
+            margin: const EdgeInsets.only(right: 16),
+            decoration: BoxDecoration(
+              color: colorScheme.primary.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              icon: Icon(Icons.logout_rounded, color: colorScheme.primary, size: 20),
+              tooltip: 'Logout',
+              onPressed: () async {
+                await AuthService.logout();
+                if (!context.mounted) return;
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -79,7 +84,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           } else if (snapshot.hasError) {
-            return Center(child: Text("Error loading data: ${snapshot.error}"));
+            return Center(child: Text("Error: ${snapshot.error}"));
           } else if (!snapshot.hasData) {
             return const Center(child: Text("No data available"));
           }
@@ -93,448 +98,308 @@ class _DashboardScreenState extends State<DashboardScreen> {
             },
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 0. WELCOME MESSAGE
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 20),
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 16,
-                      horizontal: 20,
-                    ),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [primaryGreen.withOpacity(0.9), primaryGreen],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: primaryGreen.withOpacity(0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        const CircleAvatar(
-                          backgroundColor: Colors.white,
-                          child: Icon(Icons.person, color: primaryGreen),
-                        ),
-                        const SizedBox(width: 16),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              "Welcome Back,",
-                              style: TextStyle(
-                                color: Colors.white70,
-                                fontSize: 13,
-                              ),
-                            ),
-                            Text(
-                              widget.userName,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                  const SizedBox(height: 12),
+                  Text(
+                    "Hello, ${widget.userName}",
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF1A1A1A),
                     ),
                   ),
+                  Text(
+                    "Here is what's happening today",
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
 
-                  // 2. SUMMARY SECTION
+                  // SUMMARY CARDS
                   Row(
                     children: [
                       Expanded(
-                        child: _buildSummaryCard(
-                          title: "Total Stock",
-                          count: stats.totalStock.toStringAsFixed(1),
-                          icon: Icons.inventory_2,
-                          color: Colors.blue.shade700,
-                          bgColor: Colors.blue.shade50,
+                        child: _buildStatCard(
+                          title: "Stock",
+                          value: stats.totalStock.toStringAsFixed(0),
+                          icon: Icons.inventory_2_rounded,
+                          color: const Color(0xFF2E7D32),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 16),
                       Expanded(
                         child: InkWell(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    const LowStockDetailsScreen(),
-                              ),
-                            );
-                          },
-                          child: _buildSummaryCard(
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const LowStockDetailsScreen()),
+                          ).then((_) => _loadData()),
+                          child: _buildStatCard(
                             title: "Low Stock",
-                            count: stats.lowStockItems.toString(),
-                            icon: Icons.warning_amber,
-                            color: Colors.red.shade700,
-                            bgColor: Colors.red.shade50,
+                            value: stats.lowStockItems.toString(),
+                            icon: Icons.warning_amber_rounded,
+                            color: const Color(0xFFD32F2F),
+                            isWarning: stats.lowStockItems > 0,
                           ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildSummaryCard(
-                          title: "Customers",
-                          count: stats.totalCustomers.toString(),
-                          icon: Icons.people,
-                          color: Colors.teal.shade700,
-                          bgColor: Colors.teal.shade50,
                         ),
                       ),
                     ],
                   ),
+                  const SizedBox(height: 16),
+                  _buildWideStatCard(
+                    title: "Total Customers",
+                    value: stats.totalCustomers.toString(),
+                    icon: Icons.people_alt_rounded,
+                    color: const Color(0xFF006064),
+                  ),
 
+                  const SizedBox(height: 32),
+                  Text(
+                    "Quick Navigation",
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 16),
 
-                  const SizedBox(height: 24),
-
-                  // NEW: DAILY TRANSACTIONS BUTTON
-                  Card(
-                    elevation: 3,
-                    color: Colors.blueGrey.shade50,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: InkWell(
-                      onTap: () async {
-                        final result = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                const TransactionsHomeScreen(),
-                          ),
-                        );
-                        if (result == true) {
-                          _loadData();
-                        }
-                      },
-                      borderRadius: BorderRadius.circular(16),
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.blueGrey.withOpacity(0.1),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.calculate,
-                                color: Colors.blueGrey,
-                                size: 32,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            const Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    "Daily Transactions",
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  SizedBox(height: 4),
-                                  Text(
-                                    "Record Sales & Purchases",
-                                    style: TextStyle(color: Colors.black54),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const Icon(
-                              Icons.arrow_forward_ios,
-                              size: 16,
-                              color: Colors.grey,
-                            ),
-                          ],
-                        ),
+                  _buildNavigationRow(
+                    context,
+                    [
+                      _NavOption(
+                        title: "Daily Tx",
+                        icon: Icons.account_balance_wallet_rounded,
+                        color: Colors.blue[700]!,
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TransactionsHomeScreen())).then((_) => _loadData()),
                       ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // NEW: INVOICE HISTORY BUTTON
-                  Card(
-                    elevation: 3,
-                    color: Colors.green.shade50,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: InkWell(
-                      onTap: () async {
-                        final result = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const InvoiceHistoryScreen(),
-                          ),
-                        );
-                        if (result == true) {
-                          _loadData();
-                        }
-                      },
-                      borderRadius: BorderRadius.circular(16),
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: primaryGreen.withOpacity(0.1),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.receipt_long,
-                                color: primaryGreen,
-                                size: 32,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            const Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    "Invoice History",
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  SizedBox(height: 4),
-                                  Text(
-                                    "View Sales & Invoices",
-                                    style: TextStyle(color: Colors.black54),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const Icon(
-                              Icons.arrow_forward_ios,
-                              size: 16,
-                              color: Colors.grey,
-                            ),
-                          ],
-                        ),
+                      _NavOption(
+                        title: "Invoices",
+                        icon: Icons.receipt_rounded,
+                        color: Colors.purple[700]!,
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const InvoiceHistoryScreen())).then((_) => _loadData()),
                       ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // 3. MAIN NAVIGATION ACTIONS
-                  const Text(
-                    "Quick Actions",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildActionButton(
-                          context,
-                          title: "Manage\nStock",
-                          icon: Icons.store,
-                          color: primaryGreen,
-                          onTap: () async {
-                            final result = await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const StockListScreen(),
-                              ),
-                            );
-                            if (result == true) _loadData();
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildActionButton(
-                          context,
-                          title: "Manage\nCustomers",
-                          icon: Icons.people_outline,
-                          color: Colors.orange.shade800,
-                          onTap: () async {
-                            final result = await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    const CustomerListScreen(),
-                              ),
-                            );
-                            if (result == true) _loadData();
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildActionButton(
-                          context,
-                          title: "Reports",
-                          icon: Icons.bar_chart,
-                          color: Colors.indigo.shade600,
-                          onTap: () async {
-                            await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const ReportsScreen(),
-                              ),
-                            );
-                            _loadData(); // Always refresh after reports just in case
-                          },
-                        ),
+                      _NavOption(
+                        title: "Inventory",
+                        icon: Icons.store_rounded,
+                        color: Colors.orange[800]!,
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StockListScreen())).then((_) => _loadData()),
                       ),
                     ],
                   ),
-
-                  const SizedBox(height: 24),
-
-                  // LIST REMOVED - NOW ACCESSIBLE VIA CLICKABLE SUMMARY CARD
+                  const SizedBox(height: 16),
+                  _buildNavigationRow(
+                    context,
+                    [
+                      _NavOption(
+                        title: "Customers",
+                        icon: Icons.contact_page_rounded,
+                        color: Colors.teal[700]!,
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CustomerListScreen())).then((_) => _loadData()),
+                      ),
+                      _NavOption(
+                        title: "Reports",
+                        icon: Icons.analytics_rounded,
+                        color: Colors.indigo[700]!,
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ReportsScreen())).then((_) => _loadData()),
+                      ),
+                      _NavOption(
+                        title: "Settings",
+                        icon: Icons.settings_rounded,
+                        color: Colors.grey[700]!,
+                        onTap: () {}, // Future implementation
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 100),
                 ],
               ),
             ),
           );
         },
       ),
-      // 5. FLOATING ACTION BUTTON
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
           final result = await Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const StockFormScreen()),
           );
-          if (result == true) {
-            _loadData();
-          }
+          if (result == true) _loadData();
         },
-        backgroundColor: primaryGreen,
-        icon: const Icon(Icons.add_shopping_cart, color: Colors.white),
-        label: const Text("Add Stock", style: TextStyle(color: Colors.white)),
+        elevation: 4,
+        highlightElevation: 8,
+        backgroundColor: colorScheme.primary,
+        icon: const Icon(Icons.add_rounded, color: Colors.white),
+        label: const Text("New Stock", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
     );
   }
 
-  Widget _buildSummaryCard({
+  Widget _buildStatCard({
     required String title,
-    required String count,
+    required String value,
     required IconData icon,
     required Color color,
-    required Color bgColor,
+    bool isWarning = false,
   }) {
     return Container(
-      constraints: const BoxConstraints(minHeight: 100),
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        color: isWarning ? color.withOpacity(0.05) : Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(
+          color: isWarning ? color.withOpacity(0.2) : Colors.green.shade50,
+          width: 1.5,
+        ),
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle),
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(14),
+            ),
             child: Icon(icon, color: color, size: 24),
           ),
-          const SizedBox(height: 8),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              count,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          const SizedBox(height: 16),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -1,
             ),
           ),
-          const SizedBox(height: 4),
           Text(
             title,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 14,
               color: Colors.grey[600],
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w600,
             ),
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildActionButton(
-    BuildContext context, {
+  Widget _buildWideStatCard({
     required String title,
+    required String value,
     required IconData icon,
     required Color color,
-    required VoidCallback onTap,
   }) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      elevation: 2,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 120),
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [color, color.withOpacity(0.8)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(icon, color: Colors.white, size: 32),
+          ),
+          const SizedBox(width: 20),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: color, size: 28),
-              ),
-              const SizedBox(height: 10),
               Text(
                 title,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  height: 1.1,
+                  color: Colors.white70,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              Text(
+                value,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 32,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
             ],
           ),
-        ),
+          const Spacer(),
+          const Icon(Icons.chevron_right_rounded, color: Colors.white54),
+        ],
       ),
     );
   }
+
+  Widget _buildNavigationRow(BuildContext context, List<_NavOption> options) {
+    return Row(
+      children: options.map((opt) {
+        return Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(
+              right: opt == options.last ? 0 : 12,
+            ),
+            child: InkWell(
+              onTap: opt.onTap,
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.green.shade50),
+                ),
+                child: Column(
+                  children: [
+                    Icon(opt.icon, color: opt.color, size: 28),
+                    const SizedBox(height: 12),
+                    Text(
+                      opt.title,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF333333),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+class _NavOption {
+  final String title;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  _NavOption({
+    required this.title,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
 }

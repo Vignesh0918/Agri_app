@@ -50,122 +50,137 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Custom colors for reports
-    final primaryColor = Colors.indigo.shade800;
-    const cardColor = Colors.white;
-
-    final service = TransactionService();
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAF8),
       appBar: AppBar(
-        title: const Text("Reports"),
-        backgroundColor: primaryColor,
-        foregroundColor: Colors.white,
-      ),
-      backgroundColor: Colors.grey[100],
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // 1. STOCK SUMMARY
-            _buildSectionTitle("Stock Summary"),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildInfoCard(
-                    title: "Total Products",
-                    value: stats?.totalProducts.toString() ?? "0",
-                    icon: Icons.inventory,
-                    color: Colors.blue,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildInfoCard(
-                    title: "Low Stock",
-                    value: stats?.lowStockItems.toString() ?? "0",
-                    icon: Icons.warning_amber,
-                    color: Colors.red,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            // 2. SALES & PURCHASE SUMMARY
-            _buildSectionTitle("Today's Financials"),
-            Card(
-              elevation: 2,
-              color: cardColor,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    _buildSalesRow(
-                      "Total Sales",
-                      isLoading
-                          ? "Loading..."
-                          : "₹${todaySalesTotal.toStringAsFixed(2)}",
-                      Colors.green,
-                    ),
-                    const Divider(height: 24),
-                    _buildSalesRow(
-                      "Total Purchases",
-                      isLoading
-                          ? "Loading..."
-                          : "₹${todayPurchasesTotal.toStringAsFixed(2)}",
-                      Colors.indigo,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // 3. LOW STOCK PRODUCTS
-            _buildSectionTitle("Low Stock Warnings"),
-            Card(
-              elevation: 2,
-              color: cardColor,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: stats != null && stats!.lowStockProducts.isNotEmpty
-                  ? Column(
-                      children: stats!.lowStockProducts.map((p) {
-                        return Column(
-                          children: [
-                            _buildMakeLowStockItem(p.name, p.quantity),
-                            if (p != stats!.lowStockProducts.last)
-                              const Divider(height: 1),
-                          ],
-                        );
-                      }).toList(),
-                    )
-                  : const Padding(
-                      padding: EdgeInsets.all(16.0),
-                      child: Center(child: Text("No low stock warnings")),
-                    ),
-            ),
-          ],
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          "Reports & Analytics",
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w800,
+          ),
         ),
       ),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 1. STOCK SUMMARY
+                  _buildSectionTitle("Stock Summary"),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildInfoCard(
+                          title: "Total Products",
+                          value: stats?.totalProducts.toString() ?? "0",
+                          icon: Icons.inventory_2_rounded,
+                          color: const Color(0xFF1976D2),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _buildInfoCard(
+                          title: "Low Stock",
+                          value: stats?.lowStockItems.toString() ?? "0",
+                          icon: Icons.warning_rounded,
+                          color: const Color(0xFFD32F2F),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 32),
+
+                  // 2. SALES & PURCHASE SUMMARY
+                  _buildSectionTitle("Today's Financials"),
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(32),
+                      border: Border.all(color: Colors.green.shade50, width: 2),
+                    ),
+                    child: Column(
+                      children: [
+                        _buildFinancialRow(
+                          "Gross Sales",
+                          "₹${todaySalesTotal.toStringAsFixed(0)}",
+                          const Color(0xFF2E7D32),
+                          Icons.trending_up_rounded,
+                        ),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          child: Divider(height: 1),
+                        ),
+                        _buildFinancialRow(
+                          "Total Procurement",
+                          "₹${todayPurchasesTotal.toStringAsFixed(0)}",
+                          const Color(0xFF1976D2),
+                          Icons.trending_down_rounded,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+
+                  // 3. LOW STOCK PRODUCTS
+                  _buildSectionTitle("Critical Stock Alerts"),
+                  if (stats != null && stats!.lowStockProducts.isNotEmpty)
+                    Column(
+                      children: stats!.lowStockProducts.map((p) {
+                        return _buildModernLowStockItem(p.name, p.quantity);
+                      }).toList(),
+                    )
+                  else
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(32),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: Colors.green.withOpacity(0.1)),
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(Icons.check_circle_rounded, color: Colors.green[400], size: 40),
+                          const SizedBox(height: 12),
+                          Text(
+                            "All stock levels are healthy",
+                            style: TextStyle(
+                              color: Colors.green[700],
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  const SizedBox(height: 40),
+                ],
+              ),
+            ),
     );
   }
 
   Widget _buildSectionTitle(String title) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0, left: 4.0),
+      padding: const EdgeInsets.only(bottom: 16.0, left: 4.0),
       child: Text(
         title,
         style: const TextStyle(
           fontSize: 18,
-          fontWeight: FontWeight.bold,
-          color: Colors.black87,
+          fontWeight: FontWeight.w900,
+          letterSpacing: -0.5,
         ),
       ),
     );
@@ -177,77 +192,121 @@ class _ReportsScreenState extends State<ReportsScreen> {
     required IconData icon,
     required Color color,
   }) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: color, size: 28),
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: color.withOpacity(0.1), width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
             ),
-            const SizedBox(height: 12),
-            Text(
-              value,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -1,
             ),
-            Text(
-              title,
-              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-              textAlign: TextAlign.center,
+          ),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w600,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildSalesRow(String title, String value, Color color) {
+  Widget _buildFinancialRow(String title, String value, Color color, IconData icon) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          title,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.08),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: color, size: 24),
         ),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: color,
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.grey[500],
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                  color: color,
+                ),
+              ),
+            ],
           ),
         ),
       ],
     );
   }
 
-  Widget _buildMakeLowStockItem(String name, double qty) {
+  Widget _buildModernLowStockItem(String name, double qty) {
     final qtyDisplay = qty % 1 == 0 ? qty.toInt().toString() : qty.toString();
-    return ListTile(
-      leading: const Icon(Icons.error_outline, color: Colors.orange),
-      title: Text(name, style: const TextStyle(fontWeight: FontWeight.w500)),
-      trailing: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(
-          color: Colors.red.shade50,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.red.shade200),
-        ),
-        child: Text(
-          "$qtyDisplay left",
-          style: TextStyle(
-            color: Colors.red.shade800,
-            fontWeight: FontWeight.bold,
-            fontSize: 12,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.red.withOpacity(0.1)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.error_outline_rounded, color: Colors.orange[700], size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              name,
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+            ),
           ),
-        ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.red[50],
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              "$qtyDisplay units",
+              style: TextStyle(
+                color: Colors.red[700],
+                fontWeight: FontWeight.w800,
+                fontSize: 12,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

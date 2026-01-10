@@ -70,58 +70,71 @@ class _LoginScreenState extends State<LoginScreen> {
     const primaryColor = Color(0xFF2E7D32);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF8FAF8),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.symmetric(horizontal: 32.0),
             child: Form(
               key: _formKey,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  const SizedBox(height: 40),
                   // Logo / Illustration area
-                  Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      color: primaryColor.withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.agriculture,
-                      size: 60,
-                      color: primaryColor,
+                  Center(
+                    child: Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(40),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.green.withOpacity(0.1),
+                            blurRadius: 30,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.agriculture_rounded,
+                        size: 64,
+                        color: Color(0xFF2E7D32),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 48),
 
                   // Title & Subtitle
-                  const Text(
-                    "Welcome Back",
+                  Text(
+                    "AgriShop",
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                    style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                      fontSize: 40,
+                      letterSpacing: -1,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    "Login to manage your agriculture shop",
+                    "Modern Management for Modern Farming",
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 56),
 
                   // Email
                   TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
                     decoration: const InputDecoration(
-                      labelText: "Email Address",
-                      prefixIcon: Icon(Icons.email_outlined),
+                      hintText: "Email Address",
+                      prefixIcon: Icon(Icons.email_rounded, size: 20),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -137,13 +150,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     controller: _passwordController,
                     obscureText: _obscurePassword,
                     decoration: InputDecoration(
-                      labelText: "Password",
-                      prefixIcon: const Icon(Icons.lock_outline),
+                      hintText: "Password",
+                      prefixIcon: const Icon(Icons.lock_rounded, size: 20),
                       suffixIcon: IconButton(
                         icon: Icon(
                           _obscurePassword
-                              ? Icons.visibility_off
-                              : Icons.visibility,
+                              ? Icons.visibility_off_rounded
+                              : Icons.visibility_rounded,
+                          size: 20,
                         ),
                         onPressed: () {
                           setState(() {
@@ -159,18 +173,25 @@ class _LoginScreenState extends State<LoginScreen> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () {},
+                      child: Text(
+                        "Forgot Password?",
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
 
                   // Login Button
                   ElevatedButton(
                     onPressed: _isLoading ? null : _handleLogin,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: primaryColor,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
                     child: _isLoading
                         ? const SizedBox(
                             height: 20,
@@ -181,83 +202,89 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           )
                         : const Text(
-                            "Login",
+                            "Sign In",
                             style: TextStyle(
                               fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.5,
                             ),
                           ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
 
                   // Sign Up Link
-                  TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const SignUpScreen(),
-                        ),
-                      );
-                    },
-                    child: const Text(
-                      "Don’t have an account? Sign Up",
-                      style: TextStyle(
-                        color: primaryColor,
-                        fontWeight: FontWeight.w600,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "New to AgriShop?",
+                        style: TextStyle(color: Colors.grey[600]),
                       ),
-                    ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const SignUpScreen(),
+                            ),
+                          );
+                        },
+                        child: const Text(
+                          "Create Account",
+                          style: TextStyle(
+                            color: Color(0xFF2E7D32),
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
 
-                  const SizedBox(height: 24),
-                  const Divider(),
-                  const SizedBox(height: 16),
-
+                  const SizedBox(height: 48),
+                  
                   // Connection Status
                   FutureBuilder<String>(
                     future: AuthService.getConnectionStatus(),
                     builder: (context, snapshot) {
-                      final status = snapshot.data ?? "Checking connection...";
+                      final status = snapshot.data ?? "Checking...";
                       final isOk = status.contains('✅');
 
                       return Column(
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                isOk ? Icons.check_circle : Icons.error_outline,
-                                color: isOk ? Colors.green : Colors.orange,
-                                size: 16,
+                          GestureDetector(
+                            onTap: () => _showConnectionDialog(status),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: isOk ? Colors.green.withOpacity(0.05) : Colors.orange.withOpacity(0.05),
+                                borderRadius: BorderRadius.circular(20),
                               ),
-                              const SizedBox(width: 8),
-                              Text(
-                                isOk
-                                    ? "Connected to Server"
-                                    : "Server Connection Issue",
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: isOk ? Colors.green : Colors.orange,
-                                  fontWeight: FontWeight.w500,
-                                ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    isOk ? Icons.check_circle_rounded : Icons.error_outline_rounded,
+                                    color: isOk ? Colors.green[700] : Colors.orange[700],
+                                    size: 14,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    isOk ? "System Online" : "System Offline",
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: isOk ? Colors.green[700] : Colors.orange[700],
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                          TextButton.icon(
-                            onPressed: () {
-                              _showConnectionDialog(status);
-                            },
-                            icon: const Icon(Icons.settings, size: 14),
-                            label: const Text(
-                              "Connection Settings",
-                              style: TextStyle(fontSize: 12),
                             ),
                           ),
                         ],
                       );
                     },
                   ),
+                  const SizedBox(height: 24),
                 ],
               ),
             ),
