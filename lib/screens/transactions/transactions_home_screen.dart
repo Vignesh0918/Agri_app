@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../models/transaction_record.dart';
 import '../../services/transaction_service.dart';
 import 'add_transaction_screen.dart';
@@ -66,7 +67,10 @@ class _TransactionsHomeScreenState extends State<TransactionsHomeScreen> {
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.black),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Colors.black,
+          ),
           onPressed: () => Navigator.pop(context, _dataChanged),
         ),
         title: Text(
@@ -127,7 +131,10 @@ class _TransactionsHomeScreenState extends State<TransactionsHomeScreen> {
                               ),
                             ),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
                               decoration: BoxDecoration(
                                 color: colorScheme.primary.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(12),
@@ -220,7 +227,7 @@ class _TransactionsHomeScreenState extends State<TransactionsHomeScreen> {
                     },
                   ),
                   const SizedBox(height: 32),
-                  
+
                   // Secondary Action
                   Center(
                     child: TextButton.icon(
@@ -228,7 +235,8 @@ class _TransactionsHomeScreenState extends State<TransactionsHomeScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const TransactionHistoryScreen(),
+                            builder: (context) =>
+                                const TransactionHistoryScreen(),
                           ),
                         );
                       },
@@ -246,7 +254,12 @@ class _TransactionsHomeScreenState extends State<TransactionsHomeScreen> {
     );
   }
 
-  Widget _buildSummaryItem(String label, double amount, Color color, IconData icon) {
+  Widget _buildSummaryItem(
+    String label,
+    double amount,
+    Color color,
+    IconData icon,
+  ) {
     return Column(
       children: [
         Icon(icon, color: color.withOpacity(0.5), size: 20),
@@ -330,7 +343,11 @@ class _TransactionsHomeScreenState extends State<TransactionsHomeScreen> {
                     ],
                   ),
                 ),
-                Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Colors.grey[300]),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 16,
+                  color: Colors.grey[300],
+                ),
               ],
             ),
           ),
